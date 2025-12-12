@@ -256,7 +256,7 @@
 
                 @auth
                     <!-- Comment Form -->
-                    <form action="{{ route('routes.comments.store', $route) }}" method="POST" class="mb-6">
+                    <form action="{{ route('routes.comments.store', $route) }}" method="POST" enctype="multipart/form-data" class="mb-6">
                         @csrf
                         <textarea name="content" rows="3" required
                             placeholder="Share your experience, beta, or ask questions..."
@@ -264,6 +264,16 @@
                         @error('content')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
+
+                        <div class="mt-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Attach Photo (optional)</label>
+                            <input type="file" name="photo" accept="image/jpeg,image/png,image/jpg,image/webp"
+                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                            @error('photo')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
                         <button type="submit"
                             class="mt-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
                             Post Comment
