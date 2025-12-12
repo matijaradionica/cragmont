@@ -170,4 +170,27 @@
     <div>
         @include('routes._topo_editor', ['route' => $route])
     </div>
+
+    <!-- Route Photo Gallery Upload -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+            Route Photos (Optional)
+        </label>
+        <p class="text-sm text-gray-500 mb-2">
+            Upload up to 10 photos per route.
+        </p>
+        <input type="file" name="photos[]" accept="image/*" multiple
+            class="block w-full text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-md file:border-0
+                file:text-sm file:font-semibold
+                file:bg-indigo-50 file:text-indigo-700
+                hover:file:bg-indigo-100">
+        @error('photos')
+            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+        @enderror
+        @error('photos.*')
+            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+        @enderror
+    </div>
 </div>

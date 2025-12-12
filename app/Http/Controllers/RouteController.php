@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreRouteRequest;
 use App\Http\Requests\UpdateRouteRequest;
 use App\Models\Location;
+use App\Models\Photo;
 use App\Models\Route;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -73,6 +74,24 @@ class RouteController extends Controller
         }
 
         $route = Route::create($validated);
+
+        $uploadedPhotos = $request->file('photos', []);
+        if (count($uploadedPhotos) > 10) {
+            return back()
+                ->withInput()
+                ->withErrors(['photos' => 'You can upload a maximum of 10 photos per route.']);
+        }
+
+        foreach (array_values($uploadedPhotos) as $index => $file) {
+            $path = $file->store('photos', 'public');
+            Photo::create([
+                'route_id' => $route->id,
+                'user_id' => auth()->id(),
+                'path' => $path,
+                'is_topo' => false,
+                'order' => $index,
+            ]);
+        }
 
         $message = $route->is_approved
             ? 'Route created and approved successfully!'
@@ -162,6 +181,29 @@ class RouteController extends Controller
         }
 
         $route->update($validated);
+
+        $uploadedPhotos = $request->file('photos', []);
+        if (!empty($uploadedPhotos)) {
+            $existingCount = $route->photos()->where('is_topo', false)->count();
+            $incomingCount = count($uploadedPhotos);
+            if (($existingCount + $incomingCount) > 10) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['photos' => "You can upload a maximum of 10 photos per route. This route already has {$existingCount}."]);
+            }
+
+            $nextOrder = (int) ($route->photos()->where('is_topo', false)->max('order') ?? -1) + 1;
+            foreach ($uploadedPhotos as $file) {
+                $path = $file->store('photos', 'public');
+                Photo::create([
+                    'route_id' => $route->id,
+                    'user_id' => auth()->id(),
+                    'path' => $path,
+                    'is_topo' => false,
+                    'order' => $nextOrder++,
+                ]);
+            }
+        }
 
         $message = !$route->is_approved
             ? 'Changes saved. Route will need re-approval.'

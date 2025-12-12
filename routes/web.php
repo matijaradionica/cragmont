@@ -6,6 +6,7 @@ use App\Http\Controllers\CommentReportController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\RatingController;
 use App\Http\Controllers\RouteController;
+use App\Http\Controllers\RoutePhotoController;
 use App\Http\Controllers\RouteTopoController;
 use App\Http\Controllers\UserAvatarController;
 use App\Http\Controllers\WarningController;
@@ -34,6 +35,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('routes/{route}/topo', [RouteTopoController::class, 'show'])
         ->name('routes.topo');
+
+    Route::get('routes/{route}/photos/{photo}', [RoutePhotoController::class, 'show'])
+        ->name('routes.photos.show');
 
     Route::get('users/{user}/avatar', [UserAvatarController::class, 'show'])
         ->name('users.avatar');

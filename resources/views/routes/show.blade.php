@@ -151,6 +151,58 @@
                             <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $route->required_gear }}</p>
                         </div>
                     @endif
+
+                    @php
+                        $galleryPhotos = $route->photos->where('is_topo', false)->sortBy('order')->values();
+                    @endphp
+                    <div class="bg-white shadow rounded-lg p-6" data-route-gallery>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Gallery</h3>
+                            @can('update', $route)
+                                <a href="{{ route('routes.edit', $route) }}" class="text-sm text-indigo-600 hover:text-indigo-900">
+                                    Add photos
+                                </a>
+                            @endcan
+                        </div>
+
+                        @if($galleryPhotos->isEmpty())
+                            <p class="text-sm text-gray-500">No photos uploaded yet.</p>
+                        @else
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                @foreach($galleryPhotos as $photo)
+                                    <button type="button"
+                                        data-route-gallery-item
+                                        data-fullsrc="{{ route('routes.photos.show', [$route, $photo]) }}"
+                                        class="relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-50 hover:ring-2 hover:ring-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                        <img src="{{ route('routes.photos.show', [$route, $photo]) }}"
+                                            alt="Route photo"
+                                            class="h-full w-full object-cover">
+                                    </button>
+                                @endforeach
+                            </div>
+
+                            <div data-route-gallery-lightbox class="fixed inset-0 z-50 hidden">
+                                <div data-route-gallery-backdrop class="absolute inset-0 bg-black/70"></div>
+                                <div class="absolute inset-0 z-10 flex items-center justify-center p-4">
+                                    <div class="relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-lg bg-black">
+                                        <button type="button" data-route-gallery-close
+                                            class="absolute top-3 right-3 z-10 text-white/80 hover:text-white px-3 py-2"
+                                            aria-label="Close">✕</button>
+
+                                        <button type="button" data-route-gallery-prev
+                                            class="absolute left-2 top-1/2 -translate-y-1/2 z-10 px-3 py-2 text-white/80 hover:text-white"
+                                            aria-label="Previous">‹</button>
+                                        <button type="button" data-route-gallery-next
+                                            class="absolute right-2 top-1/2 -translate-y-1/2 z-10 px-3 py-2 text-white/80 hover:text-white"
+                                            aria-label="Next">›</button>
+
+                                        <img data-route-gallery-lightbox-img alt="Route photo"
+                                            class="block max-h-[90vh] w-auto max-w-full mx-auto object-contain">
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
                 </div>
 
                 <!-- Sidebar -->
