@@ -5,6 +5,15 @@
                 {{ $route->name }}
             </h2>
             <div class="flex space-x-2">
+                @auth
+                    <a href="{{ route('ascents.create', ['route_id' => $route->id]) }}"
+                        class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Log Ascent
+                    </a>
+                @endauth
                 @can('update', $route)
                     <a href="{{ route('routes.edit', $route) }}"
                         class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">

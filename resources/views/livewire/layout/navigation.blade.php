@@ -39,6 +39,9 @@ new class extends Component
                     <x-nav-link :href="route('locations.index')" :active="request()->routeIs('locations.*')" wire:navigate>
                         {{ __('Locations') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('ascents.index')" :active="request()->routeIs('ascents.*')" wire:navigate>
+                        {{ __('Logbook') }}
+                    </x-nav-link>
                     @can('viewAdmin')
                         <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')" wire:navigate>
                             {{ __('Admin') }}
@@ -100,6 +103,9 @@ new class extends Component
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('locations.index')" :active="request()->routeIs('locations.*')" wire:navigate>
                 {{ __('Locations') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('ascents.index')" :active="request()->routeIs('ascents.*')" wire:navigate>
+                {{ __('Logbook') }}
             </x-responsive-nav-link>
             @can('viewAdmin')
                 <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')" wire:navigate>
