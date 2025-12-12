@@ -91,6 +91,44 @@ class Route extends Model
     }
 
     /**
+     * Get all ratings for the route.
+     */
+    public function ratings(): HasMany
+    {
+        return $this->hasMany(Rating::class);
+    }
+
+    /**
+     * Get all comments for the route.
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    /**
+     * Get the percentage of positive ratings.
+     */
+    public function getPositiveRatingPercentage(): int
+    {
+        $total = $this->ratings()->count();
+        if ($total === 0) {
+            return 0;
+        }
+
+        $positive = $this->ratings()->where('is_positive', true)->count();
+        return (int) round(($positive / $total) * 100);
+    }
+
+    /**
+     * Get user's rating for this route.
+     */
+    public function getUserRating(User $user): ?Rating
+    {
+        return $this->ratings()->where('user_id', $user->id)->first();
+    }
+
+    /**
      * Scope to get only approved routes.
      */
     public function scopeApproved($query)
