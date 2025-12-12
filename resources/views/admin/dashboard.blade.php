@@ -14,7 +14,7 @@
             @endif
 
             <!-- Statistics Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="bg-white shadow rounded-lg p-6">
                     <div class="text-sm font-medium text-gray-500">Total Routes</div>
                     <div class="mt-2 text-3xl font-semibold text-gray-900">{{ $stats['total_routes'] }}</div>
@@ -24,8 +24,13 @@
                     <div class="mt-2 text-3xl font-semibold text-green-600">{{ $stats['approved_routes'] }}</div>
                 </div>
                 <div class="bg-white shadow rounded-lg p-6">
-                    <div class="text-sm font-medium text-gray-500">Pending</div>
+                    <div class="text-sm font-medium text-gray-500">Pending Routes</div>
                     <div class="mt-2 text-3xl font-semibold text-yellow-600">{{ $stats['pending_routes'] }}</div>
+                </div>
+                <div class="bg-white shadow rounded-lg p-6">
+                    <div class="text-sm font-medium text-gray-500">Pending Reports</div>
+                    <div class="mt-2 text-3xl font-semibold text-orange-600">{{ $stats['pending_reports'] }}</div>
+                    <a href="{{ route('admin.reports.index') }}" class="mt-2 text-xs text-indigo-600 hover:text-indigo-900">View Reports →</a>
                 </div>
                 <div class="bg-white shadow rounded-lg p-6">
                     <div class="text-sm font-medium text-gray-500">Locations</div>
