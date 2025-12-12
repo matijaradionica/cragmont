@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AscentController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\RouteController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -33,6 +34,11 @@ Route::middleware('auth')->group(function () {
     Route::post('routes/{route}/reject', [RouteController::class, 'reject'])
         ->name('routes.reject')
         ->middleware('can:approve,route');
+});
+
+// Ascent (Logbook) routes - authenticated users can manage their own ascents
+Route::middleware('auth')->group(function () {
+    Route::resource('ascents', AscentController::class);
 });
 
 // Admin routes - only accessible by admins

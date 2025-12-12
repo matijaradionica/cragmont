@@ -83,6 +83,14 @@ class Route extends Model
     }
 
     /**
+     * Get all ascents for the route.
+     */
+    public function ascents(): HasMany
+    {
+        return $this->hasMany(Ascent::class);
+    }
+
+    /**
      * Scope to get only approved routes.
      */
     public function scopeApproved($query)
