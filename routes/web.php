@@ -6,6 +6,7 @@ use App\Http\Controllers\CommentReportController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\RatingController;
 use App\Http\Controllers\RouteController;
+use App\Http\Controllers\RouteTopoController;
 use App\Http\Controllers\WarningController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserRoleController;
@@ -29,6 +30,9 @@ Route::middleware('auth')->group(function () {
 // Route routes - authenticated users can view and create, policies control edit/delete
 Route::middleware('auth')->group(function () {
     Route::resource('routes', RouteController::class);
+
+    Route::get('routes/{route}/topo', [RouteTopoController::class, 'show'])
+        ->name('routes.topo');
 
     // Additional route management actions
     Route::post('routes/{route}/approve', [RouteController::class, 'approve'])

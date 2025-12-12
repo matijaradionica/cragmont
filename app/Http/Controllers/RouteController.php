@@ -41,6 +41,15 @@ class RouteController extends Controller
     {
         $validated = $request->validated();
 
+        if (isset($validated['topo_data'])) {
+            if ($validated['topo_data'] === 'null' || $validated['topo_data'] === null || $validated['topo_data'] === '') {
+                $validated['topo_data'] = null;
+            } elseif (is_string($validated['topo_data'])) {
+                $decoded = json_decode($validated['topo_data'], true);
+                $validated['topo_data'] = is_array($decoded) ? $decoded : null;
+            }
+        }
+
         // Set the creator
         $validated['created_by_user_id'] = auth()->id();
 
@@ -48,6 +57,12 @@ class RouteController extends Controller
         if ($request->hasFile('topo')) {
             $path = $request->file('topo')->store('topos', 'public');
             $validated['topo_url'] = $path;
+        } else {
+            $validated['topo_data'] = null;
+        }
+
+        if (empty($validated['topo_url'])) {
+            $validated['topo_data'] = null;
         }
 
         // Auto-approve for Admin and Club/Equipper users
@@ -111,6 +126,15 @@ class RouteController extends Controller
     {
         $validated = $request->validated();
 
+        if (isset($validated['topo_data'])) {
+            if ($validated['topo_data'] === 'null' || $validated['topo_data'] === null || $validated['topo_data'] === '') {
+                $validated['topo_data'] = null;
+            } elseif (is_string($validated['topo_data'])) {
+                $decoded = json_decode($validated['topo_data'], true);
+                $validated['topo_data'] = is_array($decoded) ? $decoded : null;
+            }
+        }
+
         // Handle topo file upload
         if ($request->hasFile('topo')) {
             // Delete old topo if it exists
@@ -120,6 +144,14 @@ class RouteController extends Controller
 
             $path = $request->file('topo')->store('topos', 'public');
             $validated['topo_url'] = $path;
+        }
+
+        if ($request->hasFile('topo') && empty($validated['topo_data'])) {
+            $validated['topo_data'] = null;
+        }
+
+        if (empty($validated['topo_url']) && !$route->topo_url) {
+            $validated['topo_data'] = null;
         }
 
         // Trigger re-moderation if edited by non-admin/moderator

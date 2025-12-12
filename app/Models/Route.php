@@ -25,6 +25,7 @@ class Route extends Model
         'required_gear',
         'route_type',
         'topo_url',
+        'topo_data',
         'status',
     ];
 
@@ -33,6 +34,7 @@ class Route extends Model
         'approved_at' => 'datetime',
         'length_m' => 'integer',
         'pitch_count' => 'integer',
+        'topo_data' => 'array',
     ];
 
     /**

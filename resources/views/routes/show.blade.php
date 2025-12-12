@@ -159,8 +159,12 @@
                     @if($route->topo_url)
                         <div class="bg-white shadow rounded-lg p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-4">Topo Diagram</h3>
-                            <img src="{{ Storage::url($route->topo_url) }}" alt="Topo diagram"
-                                class="w-full rounded-lg border border-gray-300">
+                            <div class="w-full rounded-lg border border-gray-300 bg-white p-2">
+                                <div class="w-full" data-topo-viewer data-topo-url="{{ route('routes.topo', $route) }}">
+                                    <script type="application/json" data-topo-data>{!! json_encode($route->topo_data) !!}</script>
+                                    <canvas data-topo-canvas></canvas>
+                                </div>
+                            </div>
                         </div>
                     @endif
 
@@ -296,4 +300,5 @@
             </div>
         </div>
     </div>
+
 </x-app-layout>
