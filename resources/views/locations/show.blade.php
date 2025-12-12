@@ -73,6 +73,14 @@
                 @endif
             </div>
 
+            <!-- Location Map -->
+            @if($location->gps_lat && $location->gps_lng)
+                <div class="bg-white shadow rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Map</h3>
+                    <livewire:location-map height="400px" :location-id="$location->id" />
+                </div>
+            @endif
+
             <!-- Child Locations -->
             @if($location->children->isNotEmpty())
                 <div class="bg-white shadow rounded-lg p-6">
