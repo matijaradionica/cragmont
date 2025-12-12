@@ -201,6 +201,89 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Ratings Section -->
+            <div class="mt-8 bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Community Rating</h3>
+
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-4">
+                        @if($route->ratings->count() > 0)
+                            <div class="text-3xl font-bold text-gray-900">
+                                {{ $route->getPositiveRatingPercentage() }}%
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                {{ $route->ratings->where('is_positive', true)->count() }} 👍 /
+                                {{ $route->ratings->where('is_positive', false)->count() }} 👎
+                                <div class="text-xs text-gray-500">{{ $route->ratings->count() }} total ratings</div>
+                            </div>
+                        @else
+                            <div class="text-gray-500">No ratings yet</div>
+                        @endif
+                    </div>
+
+                    @auth
+                        @if($userRating)
+                            <div class="text-sm text-gray-600">
+                                You rated: {{ $userRating->is_positive ? '👍 Positive' : '👎 Negative' }}
+                            </div>
+                        @elseif($userHasAscent)
+                            <form action="{{ route('routes.rate', $route) }}" method="POST" class="flex space-x-2">
+                                @csrf
+                                <button type="submit" name="is_positive" value="1"
+                                    class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">
+                                    👍 Positive
+                                </button>
+                                <button type="submit" name="is_positive" value="0"
+                                    class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">
+                                    👎 Negative
+                                </button>
+                            </form>
+                        @else
+                            <div class="text-sm text-gray-500">
+                                Log an ascent to rate this route
+                            </div>
+                        @endif
+                    @endauth
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="mt-8 bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                    Comments ({{ $route->comments->count() }})
+                </h3>
+
+                @auth
+                    <!-- Comment Form -->
+                    <form action="{{ route('routes.comments.store', $route) }}" method="POST" class="mb-6">
+                        @csrf
+                        <textarea name="content" rows="3" required
+                            placeholder="Share your experience, beta, or ask questions..."
+                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
+                        @error('content')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        <button type="submit"
+                            class="mt-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
+                            Post Comment
+                        </button>
+                    </form>
+                @else
+                    <p class="mb-6 text-gray-600">
+                        <a href="{{ route('login') }}" class="text-indigo-600 hover:text-indigo-900">Login</a> to comment
+                    </p>
+                @endauth
+
+                <!-- Comments List -->
+                <div class="space-y-6">
+                    @forelse($comments as $comment)
+                        @include('routes.partials.comment', ['comment' => $comment, 'level' => 0])
+                    @empty
+                        <p class="text-gray-500 text-center py-4">No comments yet. Be the first to comment!</p>
+                    @endforelse
+                </div>
+            </div>
         </div>
     </div>
 </x-app-layout>
