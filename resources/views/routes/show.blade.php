@@ -163,7 +163,28 @@
                                 <div class="w-full relative" data-topo-viewer data-topo-url="{{ route('routes.topo', $route) }}">
                                     <script type="application/json" data-topo-data>{!! json_encode($route->topo_data) !!}</script>
                                     <canvas data-topo-canvas></canvas>
+                                    <button type="button" data-topo-lightbox-open
+                                        class="absolute inset-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        aria-label="Open topo in full screen"></button>
                                     <div data-topo-tooltip class="pointer-events-none hidden absolute z-10 max-w-xs rounded-md bg-gray-900 text-white text-xs px-2 py-1 shadow-lg"></div>
+
+                                    <div data-topo-lightbox class="fixed inset-0 z-50 hidden">
+                                        <button type="button" data-topo-lightbox-close class="absolute inset-0 bg-black/60" aria-label="Close topo"></button>
+                                        <div class="absolute inset-0 flex items-center justify-center p-4">
+                                            <div class="relative w-full max-w-6xl rounded-lg bg-white shadow-lg border border-gray-200 p-3">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <div class="text-sm font-semibold text-gray-900">Topo Diagram</div>
+                                                    <button type="button" data-topo-lightbox-close
+                                                        class="text-gray-500 hover:text-gray-700 px-2 py-1"
+                                                        aria-label="Close">✕</button>
+                                                </div>
+                                                <div class="relative w-full">
+                                                    <canvas data-topo-lightbox-canvas></canvas>
+                                                    <div data-topo-lightbox-tooltip class="pointer-events-none hidden absolute z-10 max-w-sm rounded-md bg-gray-900 text-white text-xs px-2 py-1 shadow-lg"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
