@@ -7,6 +7,7 @@ use App\Http\Controllers\LocationController;
 use App\Http\Controllers\RatingController;
 use App\Http\Controllers\RouteController;
 use App\Http\Controllers\RouteTopoController;
+use App\Http\Controllers\UserAvatarController;
 use App\Http\Controllers\WarningController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserRoleController;
@@ -33,6 +34,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('routes/{route}/topo', [RouteTopoController::class, 'show'])
         ->name('routes.topo');
+
+    Route::get('users/{user}/avatar', [UserAvatarController::class, 'show'])
+        ->name('users.avatar');
 
     // Additional route management actions
     Route::post('routes/{route}/approve', [RouteController::class, 'approve'])
