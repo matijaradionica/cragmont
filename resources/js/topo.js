@@ -79,6 +79,13 @@ function pathPointToCanvasPoint(fabric, path, point) {
     return fabric.util.transformPoint(local, path.calcTransformMatrix());
 }
 
+function getInfoMarkerTarget(target) {
+    if (!target) return null;
+    if (target.dataType === 'info-marker') return target;
+    if (target.group?.dataType === 'info-marker') return target.group;
+    return null;
+}
+
 async function initTopoEditors() {
     const editorRoots = document.querySelectorAll('[data-topo-editor]');
     if (!editorRoots.length) return;
@@ -412,23 +419,45 @@ async function initTopoEditors() {
             if (currentTool !== 'info') return;
             if (!canvas.backgroundImage) return;
 
-            const target = event?.target;
-            if (target?.dataType === 'info-marker') {
-                openMarkerModal(target);
+            const markerTarget = getInfoMarkerTarget(event?.target);
+            if (markerTarget) {
+                openMarkerModal(markerTarget);
                 return;
             }
 
             const pointer = canvas.getPointer(event.e);
-            const markerColor = colorInput?.value ?? '#ef4444';
-            const marker = new fabric.Circle({
+            const radius = 9;
+            const circle = new fabric.Circle({
                 left: pointer.x,
                 top: pointer.y,
                 originX: 'center',
                 originY: 'center',
-                radius: 7,
-                fill: markerColor,
-                stroke: '#ffffff',
+                radius,
+                fill: '#facc15',
+                stroke: '#92400e',
                 strokeWidth: 2,
+                selectable: false,
+                evented: false,
+            });
+
+            const label = new fabric.Text('\u2139', {
+                left: pointer.x,
+                top: pointer.y + 0.5,
+                originX: 'center',
+                originY: 'center',
+                fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial',
+                fontSize: 14,
+                fontWeight: 800,
+                fill: '#111827',
+                selectable: false,
+                evented: false,
+            });
+
+            const marker = new fabric.Group([circle, label], {
+                left: pointer.x,
+                top: pointer.y,
+                originX: 'center',
+                originY: 'center',
                 selectable: false,
                 evented: true,
                 hoverCursor: 'pointer',
@@ -436,6 +465,7 @@ async function initTopoEditors() {
             marker.dataType = 'info-marker';
             marker.customData = { title: '', description: '' };
             marker.__cragmontNew = true;
+
             canvas.add(marker);
             canvas.requestRenderAll();
             openMarkerModal(marker);
@@ -585,9 +615,9 @@ async function initTopoViewers() {
             };
 
             viewerCanvas.on('mouse:move', (ev) => {
-                const target = ev?.target;
-                if (target?.dataType === 'info-marker') {
-                    showTooltip(ev, target);
+                const markerTarget = getInfoMarkerTarget(ev?.target);
+                if (markerTarget) {
+                    showTooltip(ev, markerTarget);
                 } else {
                     hideTooltip();
                 }
