@@ -15,69 +15,116 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    (function() {
         const mapId = 'map-{{ $this->getId() }}';
-        const mapElement = document.getElementById(mapId);
+        let mapInstance = null;
 
-        if (!mapElement) return;
+        function initializeMap() {
+            const mapElement = document.getElementById(mapId);
 
-        // Initialize map
-        const map = L.map(mapId).setView([{{ $centerLat }}, {{ $centerLng }}], {{ $zoom }});
+            if (!mapElement) {
+                console.warn('Map element not found:', mapId);
+                return;
+            }
 
-        // Add tile layer (OpenStreetMap)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19,
-        }).addTo(map);
+            // Check if map already exists and remove it
+            if (mapInstance) {
+                mapInstance.remove();
+                mapInstance = null;
+            }
 
-        // Initialize marker cluster group
-        const markers = L.markerClusterGroup({
-            maxClusterRadius: 50,
-            spiderfyOnMaxZoom: true,
-            showCoverageOnHover: false,
-            zoomToBoundsOnClick: true
-        });
+            // Clear the container
+            mapElement.innerHTML = '';
+            mapElement._leaflet_id = null;
 
-        // Add location markers
-        const locations = @json($locations);
+            // Initialize map
+            mapInstance = L.map(mapId, {
+                preferCanvas: true,
+                worldCopyJump: true,
+                maxBounds: [[-90, -180], [90, 180]],
+                maxBoundsViscosity: 1.0
+            }).setView([{{ $centerLat }}, {{ $centerLng }}], {{ $zoom }});
 
-        locations.forEach(location => {
-            if (location.gps_lat && location.gps_lng) {
-                const marker = L.marker([location.gps_lat, location.gps_lng]);
+            // Add tile layer (OpenStreetMap)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19,
+                noWrap: true,
+                bounds: [[-90, -180], [90, 180]]
+            }).addTo(mapInstance);
 
-                // Create popup content
-                const routeCount = location.routes?.length || 0;
-                const popupContent = `
-                    <div class="p-2">
-                        <h3 class="font-bold text-lg mb-1">${location.name}</h3>
-                        ${location.description ? `<p class="text-sm text-gray-600 mb-2">${location.description}</p>` : ''}
-                        <p class="text-sm font-medium text-gray-700">
-                            <svg class="inline-block w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                            </svg>
-                            ${routeCount} approved ${routeCount === 1 ? 'route' : 'routes'}
-                        </p>
-                        <a href="/locations/${location.id}"
-                           class="inline-block mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition">
-                            View Details
-                        </a>
-                    </div>
-                `;
+            // Initialize marker cluster group
+            const markers = L.markerClusterGroup({
+                maxClusterRadius: 50,
+                spiderfyOnMaxZoom: true,
+                showCoverageOnHover: false,
+                zoomToBoundsOnClick: true
+            });
 
-                marker.bindPopup(popupContent);
-                markers.addLayer(marker);
+            // Add location markers
+            const locations = @json($locations);
+
+            locations.forEach(location => {
+                if (location.gps_lat && location.gps_lng) {
+                    const marker = L.marker([location.gps_lat, location.gps_lng]);
+
+                    // Create popup content
+                    const routeCount = location.routes?.length || 0;
+                    const popupContent = `
+                        <div class="p-2">
+                            <h3 class="font-bold text-lg mb-1">${location.name}</h3>
+                            ${location.description ? `<p class="text-sm text-gray-600 mb-2">${location.description}</p>` : ''}
+                            <p class="text-sm font-medium text-gray-700">
+                                <svg class="inline-block w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
+                                ${routeCount} approved ${routeCount === 1 ? 'route' : 'routes'}
+                            </p>
+                            <a href="/locations/${location.id}"
+                               class="inline-block mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition">
+                                View Details
+                            </a>
+                        </div>
+                    `;
+
+                    marker.bindPopup(popupContent);
+                    markers.addLayer(marker);
+                }
+            });
+
+            // Add marker cluster to map
+            mapInstance.addLayer(markers);
+
+            // Fix map size issues
+            setTimeout(() => {
+                mapInstance.invalidateSize();
+
+                // Fit bounds if multiple locations
+                @if(!$showSingleLocation && count($locations) > 1)
+                    if (markers.getLayers().length > 0) {
+                        mapInstance.fitBounds(markers.getBounds(), { padding: [50, 50] });
+                    }
+                @endif
+            }, 100);
+        }
+
+        // Initialize on DOMContentLoaded (for initial page load)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeMap);
+        } else {
+            initializeMap();
+        }
+
+        // Re-initialize on Livewire navigation
+        document.addEventListener('livewire:navigated', initializeMap);
+
+        // Cleanup on page leave
+        document.addEventListener('livewire:navigating', function() {
+            if (mapInstance) {
+                mapInstance.remove();
+                mapInstance = null;
             }
         });
-
-        // Add marker cluster to map
-        map.addLayer(markers);
-
-        // Fit bounds if multiple locations
-        @if(!$showSingleLocation && count($locations) > 1)
-            if (markers.getLayers().length > 0) {
-                map.fitBounds(markers.getBounds(), { padding: [50, 50] });
-            }
-        @endif
-    });
+    })();
 </script>
 @endpush
