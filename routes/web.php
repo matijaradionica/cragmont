@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\AscentController;
+use App\Http\Controllers\CommentController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\RatingController;
 use App\Http\Controllers\RouteController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserRoleController;
@@ -39,6 +41,15 @@ Route::middleware('auth')->group(function () {
 // Ascent (Logbook) routes - authenticated users can manage their own ascents
 Route::middleware('auth')->group(function () {
     Route::resource('ascents', AscentController::class);
+});
+
+// Rating and Comment routes
+Route::middleware('auth')->group(function () {
+    Route::post('routes/{route}/rate', [RatingController::class, 'store'])->name('routes.rate');
+    Route::post('routes/{route}/comments', [CommentController::class, 'store'])->name('routes.comments.store');
+    Route::put('comments/{comment}', [CommentController::class, 'update'])->name('comments.update');
+    Route::delete('comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+    Route::post('comments/{comment}/vote', [CommentController::class, 'vote'])->name('comments.vote');
 });
 
 // Admin routes - only accessible by admins

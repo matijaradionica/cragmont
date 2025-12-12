@@ -74,9 +74,22 @@ class RouteController extends Controller
     {
         $this->authorize('view', $route);
 
-        $route->load(['location', 'creator', 'approver', 'photos']);
+        $route->load(['location', 'creator', 'approver', 'photos', 'ratings.user']);
 
-        return view('routes.show', compact('route'));
+        // Load top-level comments with replies
+        $comments = $route->comments()
+            ->with(['user', 'replies.user', 'replies.replies.user'])
+            ->topLevel()
+            ->mostHelpful()
+            ->get();
+
+        // Get user's rating if authenticated
+        $userRating = auth()->check() ? $route->getUserRating(auth()->user()) : null;
+
+        // Check if user has logged ascent (required for rating)
+        $userHasAscent = auth()->check() ? $route->ascents()->where('user_id', auth()->id())->exists() : false;
+
+        return view('routes.show', compact('route', 'comments', 'userRating', 'userHasAscent'));
     }
 
     /**
