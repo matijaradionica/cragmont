@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('comment_reports', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('reported_by_user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('comment_id')->constrained()->onDelete('cascade');
             $table->string('reason');
             $table->text('description')->nullable();
-            $table->enum('status', ['pending', 'reviewed', 'dismissed'])->default('pending');
+            $table->enum('status', ['pending', 'resolved', 'dismissed'])->default('pending');
             $table->foreignId('reviewed_by_user_id')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('reviewed_at')->nullable();
             $table->timestamps();
@@ -25,6 +25,7 @@ return new class extends Migration
             // Indexes
             $table->index('comment_id');
             $table->index('status');
+            $table->index('reported_by_user_id');
         });
     }
 

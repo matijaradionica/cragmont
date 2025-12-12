@@ -98,6 +98,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the warnings received by the user.
+     */
+    public function warnings(): HasMany
+    {
+        return $this->hasMany(UserWarning::class);
+    }
+
+    /**
+     * Get the count of unread warnings.
+     */
+    public function getUnreadWarningsCount(): int
+    {
+        return $this->warnings()->unread()->count();
+    }
+
+    /**
      * Check if the user is an admin.
      */
     public function isAdmin(): bool

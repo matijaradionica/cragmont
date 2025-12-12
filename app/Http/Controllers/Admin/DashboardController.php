@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CommentReport;
 use App\Models\Location;
 use App\Models\Route;
 use App\Models\User;
@@ -20,6 +21,7 @@ class DashboardController extends Controller
             'total_routes' => Route::count(),
             'approved_routes' => Route::where('is_approved', true)->count(),
             'pending_routes' => Route::where('is_approved', false)->count(),
+            'pending_reports' => CommentReport::where('status', 'pending')->count(),
             'total_locations' => Location::count(),
             'total_users' => User::count(),
         ];

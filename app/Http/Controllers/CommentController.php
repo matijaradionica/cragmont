@@ -23,14 +23,26 @@ class CommentController extends Controller
         $validated = $request->validate([
             'content' => 'required|string|max:5000',
             'parent_id' => 'nullable|exists:comments,id',
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
-        $comment = Comment::create([
+        $commentData = [
             'user_id' => auth()->id(),
             'route_id' => $route->id,
             'parent_id' => $validated['parent_id'] ?? null,
             'content' => $validated['content'],
-        ]);
+        ];
+
+        // Handle photo upload
+        if ($request->hasFile('photo')) {
+            $path = $request->file('photo')->store('comments', 'public');
+            $commentData['photo_path'] = $path;
+        }
+
+        $comment = Comment::create($commentData);
+
+        // Parse and save mentions
+        $comment->saveMentions();
 
         return back()->with('success', 'Comment posted successfully!');
     }
@@ -52,6 +64,9 @@ class CommentController extends Controller
             'content' => $validated['content'],
             'edited_at' => now(),
         ]);
+
+        // Re-parse and save mentions
+        $comment->saveMentions();
 
         return back()->with('success', 'Comment updated successfully!');
     }

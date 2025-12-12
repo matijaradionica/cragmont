@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\AscentController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\CommentReportController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\RatingController;
 use App\Http\Controllers\RouteController;
+use App\Http\Controllers\WarningController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserRoleController;
 use Illuminate\Support\Facades\Route;
@@ -50,6 +52,14 @@ Route::middleware('auth')->group(function () {
     Route::put('comments/{comment}', [CommentController::class, 'update'])->name('comments.update');
     Route::delete('comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
     Route::post('comments/{comment}/vote', [CommentController::class, 'vote'])->name('comments.vote');
+    Route::post('comments/{comment}/report', [CommentReportController::class, 'store'])->name('comments.report');
+});
+
+// User warnings routes
+Route::middleware('auth')->group(function () {
+    Route::get('warnings', [WarningController::class, 'index'])->name('warnings.index');
+    Route::post('warnings/{warning}/mark-as-read', [WarningController::class, 'markAsRead'])->name('warnings.mark-as-read');
+    Route::post('warnings/mark-all-as-read', [WarningController::class, 'markAllAsRead'])->name('warnings.mark-all-as-read');
 });
 
 // Admin routes - only accessible by admins
@@ -60,6 +70,11 @@ Route::middleware(['auth', 'can:viewAdmin'])->prefix('admin')->name('admin.')->g
     // User role management
     Route::get('users', [UserRoleController::class, 'index'])->name('users.index');
     Route::patch('users/{user}/role', [UserRoleController::class, 'updateRole'])->name('users.update-role');
+
+    // Comment reports
+    Route::get('reports', [CommentReportController::class, 'index'])->name('reports.index');
+    Route::post('reports/{report}/approve', [CommentReportController::class, 'approve'])->name('reports.approve');
+    Route::post('reports/{report}/dismiss', [CommentReportController::class, 'dismiss'])->name('reports.dismiss');
 });
 
 require __DIR__.'/auth.php';
