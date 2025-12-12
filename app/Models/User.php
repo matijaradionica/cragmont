@@ -82,6 +82,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the ratings created by the user.
+     */
+    public function ratings(): HasMany
+    {
+        return $this->hasMany(Rating::class);
+    }
+
+    /**
+     * Get the comments created by the user.
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    /**
      * Check if the user is an admin.
      */
     public function isAdmin(): bool
