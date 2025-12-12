@@ -89,4 +89,8 @@ Route::middleware(['auth', 'can:viewAdmin'])->prefix('admin')->name('admin.')->g
     Route::post('reports/{report}/dismiss', [CommentReportController::class, 'dismiss'])->name('reports.dismiss');
 });
 
+Route::middleware(['auth', 'can:moderateConditions'])->prefix('admin')->name('admin.')->group(function () {
+    Route::view('condition-reports', 'admin.condition-reports.index')->name('condition-reports.index');
+});
+
 require __DIR__.'/auth.php';

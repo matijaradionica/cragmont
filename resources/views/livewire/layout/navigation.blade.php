@@ -181,6 +181,11 @@ new class extends Component
                         <x-dropdown-link :href="route('profile')" wire:navigate>
                             {{ __('Profile') }}
                         </x-dropdown-link>
+                        @can('moderateConditions')
+                            <x-dropdown-link :href="route('admin.condition-reports.index')" wire:navigate>
+                                {{ __('Safety Reports') }}
+                            </x-dropdown-link>
+                        @endcan
 
                         <!-- Authentication -->
                         <button wire:click="logout" class="w-full text-start">
@@ -270,6 +275,11 @@ new class extends Component
                 <x-responsive-nav-link :href="route('ascents.index')" wire:navigate>
                     {{ __('Logbook') }}
                 </x-responsive-nav-link>
+                @can('moderateConditions')
+                    <x-responsive-nav-link :href="route('admin.condition-reports.index')" wire:navigate>
+                        {{ __('Safety Reports') }}
+                    </x-responsive-nav-link>
+                @endcan
                 <x-responsive-nav-link :href="route('profile')" wire:navigate>
                     {{ __('Profile') }}
                 </x-responsive-nav-link>

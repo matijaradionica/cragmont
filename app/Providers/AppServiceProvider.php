@@ -30,5 +30,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('moderate', function (User $user) {
             return $user->isAdmin() || $user->isModerator();
         });
+
+        Gate::define('moderateConditions', function (User $user) {
+            return $user->isAdmin() || $user->isModerator() || $user->isClubEquipper();
+        });
     }
 }

@@ -87,6 +87,11 @@ class Route extends Model
         return $this->hasMany(Photo::class);
     }
 
+    public function conditionReports(): HasMany
+    {
+        return $this->hasMany(ConditionReport::class);
+    }
+
     /**
      * Get all ascents for the route.
      */

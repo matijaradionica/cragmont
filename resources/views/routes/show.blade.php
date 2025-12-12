@@ -152,6 +152,9 @@
                         </div>
                     @endif
 
+                    <livewire:condition-reports.list :routeId="$route->id" />
+                    <livewire:condition-reports.create :routeId="$route->id" />
+
                     @php
                         $galleryPhotos = $route->photos->where('is_topo', false)->sortBy('order')->values();
                     @endphp
