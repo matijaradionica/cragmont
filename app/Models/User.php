@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -24,6 +25,9 @@ class User extends Authenticatable
         'email',
         'password',
         'role_id',
+        'avatar_path',
+        'bio',
+        'climbing_club_id',
     ];
 
     /**
@@ -55,6 +59,11 @@ class User extends Authenticatable
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class);
+    }
+
+    public function climbingClub(): BelongsTo
+    {
+        return $this->belongsTo(ClimbingClub::class);
     }
 
     /**
@@ -151,5 +160,16 @@ class User extends Authenticatable
     public function hasRole(string $roleName): bool
     {
         return $this->role && $this->role->name === $roleName;
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function (User $user) {
+            if ($user->avatar_path) {
+                Storage::disk('public')->delete($user->avatar_path);
+            }
+        });
     }
 }

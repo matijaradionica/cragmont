@@ -39,9 +39,6 @@ new class extends Component
                     <x-nav-link :href="route('locations.index')" :active="request()->routeIs('locations.*')" wire:navigate>
                         {{ __('Locations') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('ascents.index')" :active="request()->routeIs('ascents.*')" wire:navigate>
-                        {{ __('Logbook') }}
-                    </x-nav-link>
                     @can('viewAdmin')
                         <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')" wire:navigate>
                             {{ __('Admin') }}
@@ -152,6 +149,9 @@ new class extends Component
                     </x-slot>
 
                     <x-slot name="content">
+                        <x-dropdown-link :href="route('ascents.index')" wire:navigate>
+                            {{ __('Logbook') }}
+                        </x-dropdown-link>
                         <x-dropdown-link :href="route('profile')" wire:navigate>
                             {{ __('Profile') }}
                         </x-dropdown-link>
@@ -189,9 +189,6 @@ new class extends Component
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('locations.index')" :active="request()->routeIs('locations.*')" wire:navigate>
                 {{ __('Locations') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('ascents.index')" :active="request()->routeIs('ascents.*')" wire:navigate>
-                {{ __('Logbook') }}
             </x-responsive-nav-link>
             @can('viewAdmin')
                 <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')" wire:navigate>
@@ -233,6 +230,9 @@ new class extends Component
                         </span>
                     </x-responsive-nav-link>
                 @endif
+                <x-responsive-nav-link :href="route('ascents.index')" wire:navigate>
+                    {{ __('Logbook') }}
+                </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('profile')" wire:navigate>
                     {{ __('Profile') }}
                 </x-responsive-nav-link>
