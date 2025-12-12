@@ -46,6 +46,8 @@ class UpdateRouteRequest extends FormRequest
             // File upload
             'topo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'], // 5MB max
             'topo_data' => ['nullable', 'json'],
+            'photos' => ['nullable', 'array'],
+            'photos.*' => ['image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
         ];
     }
 }

@@ -49,6 +49,9 @@ class Route extends Model
             if ($route->topo_url) {
                 Storage::disk('public')->delete($route->topo_url);
             }
+
+            // Delete route photos (also removes files)
+            $route->photos()->get()->each->delete();
         });
     }
 
