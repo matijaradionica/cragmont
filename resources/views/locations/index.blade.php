@@ -21,6 +21,12 @@
                 </div>
             @endif
 
+            <!-- Interactive Map -->
+            <div class="mb-6 bg-white shadow rounded-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Location Map</h3>
+                <livewire:location-map height="600px" />
+            </div>
+
             <div class="bg-white shadow rounded-lg">
                 <div class="p-6">
                     @foreach($locations as $location)

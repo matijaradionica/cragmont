@@ -18,5 +18,3 @@ The project relies on **Laravel** for a robust backend and standardized function
 ---
 
 In short, the application is a **digital guidebook and ascent management tool** that connects climbers with accurate and updated information about routes.
-
-Would you like me to elaborate on the **key features** or the **technology stack** in more detail?
