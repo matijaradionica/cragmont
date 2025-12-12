@@ -168,9 +168,6 @@
 
     <!-- Topo Upload (Livewire Component) -->
     <div>
-        <livewire:topo-upload :existingTopoUrl="$route->topo_url" />
-        @error('topo')
-            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-        @enderror
+        @include('routes._topo_editor', ['route' => $route])
     </div>
 </div>
