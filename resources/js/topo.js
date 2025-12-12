@@ -44,6 +44,24 @@ function setBackgroundImageCompat(canvas, img) {
     canvas.requestRenderAll();
 }
 
+function getLastPathPoint(pathCommands) {
+    for (let i = pathCommands.length - 1; i >= 0; i -= 1) {
+        const cmd = pathCommands[i];
+        if (!Array.isArray(cmd) || !cmd.length) continue;
+        const type = cmd[0];
+
+        if (type === 'Q' && cmd.length >= 5) return { x: cmd[3], y: cmd[4] };
+        if (type === 'C' && cmd.length >= 7) return { x: cmd[5], y: cmd[6] };
+        if ((type === 'L' || type === 'M') && cmd.length >= 3) return { x: cmd[1], y: cmd[2] };
+    }
+    return null;
+}
+
+function pathPointToCanvasPoint(fabric, path, point) {
+    const local = new fabric.Point(point.x - path.pathOffset.x, point.y - path.pathOffset.y);
+    return fabric.util.transformPoint(local, path.calcTransformMatrix());
+}
+
 async function initTopoEditors() {
     const editorRoots = document.querySelectorAll('[data-topo-editor]');
     if (!editorRoots.length) return;
@@ -217,6 +235,65 @@ async function initTopoEditors() {
         });
 
         canvas.on('path:created', () => {
+            // Intentionally no-op; we re-handle below with markers.
+        });
+        canvas.off('path:created');
+        canvas.on('path:created', (event) => {
+            const path = event?.path;
+            if (!path?.path?.length) {
+                pushHistory();
+                saveTopoData();
+                return;
+            }
+
+            const startCmd = path.path[0];
+            const startLocal =
+                Array.isArray(startCmd) && startCmd[0] === 'M' && startCmd.length >= 3
+                    ? { x: startCmd[1], y: startCmd[2] }
+                    : null;
+            const endLocal = getLastPathPoint(path.path);
+            if (!startLocal || !endLocal) {
+                pushHistory();
+                saveTopoData();
+                return;
+            }
+
+            const start = pathPointToCanvasPoint(fabric, path, startLocal);
+            const end = pathPointToCanvasPoint(fabric, path, endLocal);
+            const markerColor = path.stroke || colorInput?.value || '#ef4444';
+            const radius = 7;
+
+            const startCircle = new fabric.Circle({
+                left: start.x,
+                top: start.y,
+                originX: 'center',
+                originY: 'center',
+                radius,
+                fill: markerColor,
+                selectable: false,
+                evented: false,
+            });
+
+            const endCircle = new fabric.Circle({
+                left: end.x,
+                top: end.y,
+                originX: 'center',
+                originY: 'center',
+                radius,
+                fill: markerColor,
+                selectable: false,
+                evented: false,
+            });
+
+            // Group the line + markers so edits/deletes keep them together.
+            canvas.remove(path);
+            const group = new fabric.Group([path, startCircle, endCircle], {
+                selectable: true,
+                evented: true,
+            });
+            canvas.add(group);
+            canvas.requestRenderAll();
+
             pushHistory();
             saveTopoData();
         });
