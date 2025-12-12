@@ -74,6 +74,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the ascents logged by the user.
+     */
+    public function ascents(): HasMany
+    {
+        return $this->hasMany(Ascent::class);
+    }
+
+    /**
      * Check if the user is an admin.
      */
     public function isAdmin(): bool
