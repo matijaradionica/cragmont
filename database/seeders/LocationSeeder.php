@@ -13,6 +13,8 @@ class LocationSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->command->info('Creating location hierarchy...');
+
         // Create Yosemite National Park (Mountain - Level 0)
         $yosemite = Location::create([
             'name' => 'Yosemite National Park',
@@ -88,5 +90,35 @@ class LocationSeeder extends Seeder
             'description' => 'Classic beginner routes',
             'level' => 2,
         ]);
+
+        $this->command->info('Creating additional locations with factories...');
+
+        // Create 5 additional mountains with random data
+        for ($i = 0; $i < 5; $i++) {
+            $mountain = Location::factory()->mountain()->create();
+
+            // Create 2-4 cliffs for each mountain
+            $numCliffs = rand(2, 4);
+            for ($j = 0; $j < $numCliffs; $j++) {
+                $cliff = Location::factory()->cliff()->create([
+                    'parent_id' => $mountain->id,
+                ]);
+
+                // Create 3-6 sectors for each cliff
+                $numSectors = rand(3, 6);
+                for ($k = 0; $k < $numSectors; $k++) {
+                    Location::factory()->sector()->create([
+                        'parent_id' => $cliff->id,
+                    ]);
+                }
+            }
+        }
+
+        $mountainCount = Location::where('level', 0)->count();
+        $cliffCount = Location::where('level', 1)->count();
+        $sectorCount = Location::where('level', 2)->count();
+
+        $this->command->info("Created {$mountainCount} mountains, {$cliffCount} cliffs, {$sectorCount} sectors");
+        $this->command->info('Total locations: ' . Location::count());
     }
 }

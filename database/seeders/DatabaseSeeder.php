@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             UserSeeder::class,
             LocationSeeder::class,
+            RouteSeeder::class,
         ]);
     }
 }
