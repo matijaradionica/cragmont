@@ -42,8 +42,8 @@ class RouteSeeder extends Seeder
         foreach ($locations as $location) {
             $numRoutes = match($location->level) {
                 0 => rand(0, 2),    // Few routes at mountain level
-                1 => rand(2, 5),    // Some routes at cliff level
-                2 => rand(5, 15),   // Many routes at sector level
+                1 => rand(1, 3),    // Some routes at cliff level
+                2 => rand(2, 4),   // Many routes at sector level
                 default => 0,
             };
 

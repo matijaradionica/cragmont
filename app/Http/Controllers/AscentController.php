@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ascent;
 use App\Models\Route;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class AscentController extends Controller
@@ -31,7 +32,83 @@ class AscentController extends Controller
             ->orderBy('ascent_date', 'desc')
             ->paginate(20);
 
-        return view('ascents.index', compact('ascents'));
+        $successfulAscents = Ascent::query()
+            ->where('ascents.user_id', $userId)
+            ->where('ascents.status', 'Success');
+
+        $successfulCount = (int) $successfulAscents->clone()->count();
+
+        $uniqueRouteCount = (int) Ascent::query()
+            ->where('ascents.user_id', $userId)
+            ->distinct('route_id')
+            ->count('route_id');
+
+        $totalVerticalM = (int) $successfulAscents
+            ->clone()
+            ->join('routes', 'ascents.route_id', '=', 'routes.id')
+            ->whereNotNull('routes.length_m')
+            ->sum('routes.length_m');
+
+        $totalVerticalFt = (int) round($totalVerticalM * 3.28084);
+
+        $yearStart = now()->startOfYear()->toDateString();
+        $yearEnd = now()->endOfYear()->toDateString();
+
+        $activityRows = Ascent::query()
+            ->where('user_id', $userId)
+            ->whereBetween('ascent_date', [$yearStart, $yearEnd])
+            ->selectRaw('MONTH(ascent_date) as m, COUNT(*) as c')
+            ->groupBy('m')
+            ->pluck('c', 'm')
+            ->all();
+
+        $activityByMonth = collect(range(1, 12))
+            ->map(function (int $month) use ($activityRows) {
+                return [
+                    'month' => $month,
+                    'count' => (int) ($activityRows[$month] ?? 0),
+                ];
+            })
+            ->all();
+
+        $maxMonthlyCount = (int) collect($activityByMonth)->max('count');
+
+        $gradeRows = Ascent::query()
+            ->where('ascents.user_id', $userId)
+            ->where('ascents.status', 'Success')
+            ->join('routes', 'ascents.route_id', '=', 'routes.id')
+            ->select([
+                'routes.grade_type',
+                'routes.grade_value',
+                DB::raw('COUNT(*) as c'),
+            ])
+            ->groupBy('routes.grade_type', 'routes.grade_value')
+            ->orderByDesc('c')
+            ->limit(12)
+            ->get();
+
+        $ascentsByGrade = $gradeRows
+            ->map(function ($row) {
+                return [
+                    'label' => "{$row->grade_type} {$row->grade_value}",
+                    'count' => (int) $row->c,
+                ];
+            })
+            ->all();
+
+        $maxGradeCount = (int) collect($ascentsByGrade)->max('count');
+
+        return view('ascents.index', compact(
+            'ascents',
+            'successfulCount',
+            'uniqueRouteCount',
+            'totalVerticalM',
+            'totalVerticalFt',
+            'activityByMonth',
+            'maxMonthlyCount',
+            'ascentsByGrade',
+            'maxGradeCount',
+        ));
     }
 
     /**

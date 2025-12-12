@@ -110,14 +110,84 @@
                     <div class="bg-white shadow rounded-lg p-6">
                         <div class="text-sm font-medium text-gray-500">Successful Climbs</div>
                         <div class="mt-2 text-3xl font-semibold text-green-600">
-                            {{ auth()->user()->ascents()->where('status', 'Success')->count() }}
+                            {{ $successfulCount }}
                         </div>
                     </div>
                     <div class="bg-white shadow rounded-lg p-6">
                         <div class="text-sm font-medium text-gray-500">Unique Routes</div>
                         <div class="mt-2 text-3xl font-semibold text-indigo-600">
-                            {{ auth()->user()->ascents()->distinct('route_id')->count('route_id') }}
+                            {{ $uniqueRouteCount }}
                         </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="bg-white shadow rounded-lg p-6">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-medium text-gray-500">Total Vertical Climbed</div>
+                                <div class="mt-2 text-3xl font-semibold text-gray-900">
+                                    {{ number_format($totalVerticalM) }} m
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    {{ number_format($totalVerticalFt) }} ft (successful climbs with length set)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white shadow rounded-lg p-6">
+                        <div class="text-sm font-medium text-gray-500">Ascents by Grade (Success)</div>
+
+                        @if(empty($ascentsByGrade))
+                            <p class="mt-3 text-sm text-gray-500">No successful climbs yet.</p>
+                        @else
+                            <div class="mt-4 space-y-2">
+                                @foreach($ascentsByGrade as $row)
+                                    @php
+                                        $pct = $maxGradeCount > 0 ? (int) round(($row['count'] / $maxGradeCount) * 100) : 0;
+                                    @endphp
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-28 shrink-0 text-xs text-gray-700 truncate" title="{{ $row['label'] }}">
+                                            {{ $row['label'] }}
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="h-2 w-full rounded bg-gray-100 overflow-hidden">
+                                                <div class="h-2 bg-indigo-500" style="width: {{ $pct }}%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="w-10 text-right text-xs font-medium text-gray-700">{{ $row['count'] }}</div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-white shadow rounded-lg p-6">
+                    <div class="flex items-baseline justify-between gap-3">
+                        <div class="text-sm font-medium text-gray-500">Annual Activity ({{ now()->year }})</div>
+                        <div class="text-xs text-gray-400">ascents per month</div>
+                    </div>
+
+                    @php
+                        $monthLabels = [1=>'Jan',2=>'Feb',3=>'Mar',4=>'Apr',5=>'May',6=>'Jun',7=>'Jul',8=>'Aug',9=>'Sep',10=>'Oct',11=>'Nov',12=>'Dec'];
+                    @endphp
+
+                    <div class="mt-4 grid grid-cols-12 gap-2 items-end">
+                        @foreach($activityByMonth as $row)
+                            @php
+                                $h = $maxMonthlyCount > 0 ? (int) round(($row['count'] / $maxMonthlyCount) * 100) : 0;
+                                $h = $row['count'] > 0 ? max(4, $h) : 0;
+                                $label = $monthLabels[$row['month']] ?? (string) $row['month'];
+                            @endphp
+                            <div class="flex flex-col items-center gap-1">
+                                <div class="w-full h-28 flex items-end">
+                                    <div class="w-full rounded bg-indigo-500/80" style="height: {{ $h }}%" title="{{ $label }}: {{ $row['count'] }}"></div>
+                                </div>
+                                <div class="text-[10px] text-gray-500">{{ $label }}</div>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
             @endif
