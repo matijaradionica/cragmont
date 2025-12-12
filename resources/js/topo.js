@@ -555,6 +555,15 @@ async function initTopoViewers() {
             const setCanvasCssSize = () => {
                 const rect = viewerRoot.getBoundingClientRect();
                 if (!rect.width || !viewerCanvas.width || !viewerCanvas.height) return;
+                if (rect.height && rect.height > 50) {
+                    const scale = Math.min(rect.width / viewerCanvas.width, rect.height / viewerCanvas.height);
+                    const cssWidth = Math.max(1, Math.floor(viewerCanvas.width * scale));
+                    const cssHeight = Math.max(1, Math.floor(viewerCanvas.height * scale));
+                    viewerCanvas.setDimensions({ width: cssWidth, height: cssHeight }, { cssOnly: true });
+                    viewerCanvas.calcOffset();
+                    return;
+                }
+
                 const cssWidth = rect.width;
                 const cssHeight = Math.round(cssWidth * (viewerCanvas.height / viewerCanvas.width));
                 viewerCanvas.setDimensions({ width: cssWidth, height: cssHeight }, { cssOnly: true });
@@ -680,7 +689,7 @@ async function initTopoViewers() {
             lockCanvasScroll(true);
 
             if (!largeViewer) {
-                const lightboxContainer = lightboxCanvasElement.parentElement ?? lightbox;
+                const lightboxContainer = root.querySelector('[data-topo-lightbox-wrap]') ?? lightboxCanvasElement.parentElement ?? lightbox;
                 largeViewer = createViewer(lightboxContainer, lightboxCanvasElement, lightboxTooltip);
 
                 const img = await fabric.FabricImage.fromURL(topoUrl, { crossOrigin: 'anonymous' });
@@ -738,6 +747,9 @@ async function initTopoViewers() {
 
         lightboxOpen?.addEventListener('click', () => openLightbox().catch((err) => console.error(err)));
         lightboxCloseButtons?.forEach((btn) => btn.addEventListener('click', () => closeLightbox()));
+        lightbox?.addEventListener('click', (e) => {
+            if (e.target?.matches?.('[data-topo-lightbox-backdrop]')) closeLightbox();
+        });
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closeLightbox();
         });
