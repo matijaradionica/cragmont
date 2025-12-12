@@ -34,7 +34,7 @@
         </div>
     </x-slot>
 
-    <div class="py-12">
+    <div class="py-12" data-route-id="{{ $route->id }}">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             @if(session('success'))
                 <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative">
@@ -213,7 +213,10 @@
                     <!-- Topo Diagram -->
                     @if($route->topo_url)
                         <div class="bg-white shadow rounded-lg p-6">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Topo Diagram</h3>
+                            <div class="flex items-center justify-between gap-3 mb-4">
+                                <h3 class="text-lg font-semibold text-gray-900">Topo Diagram</h3>
+                                <livewire:routes.save-offline :routeId="$route->id" />
+                            </div>
                             <div class="w-full rounded-lg border border-gray-300 bg-white p-2">
                                 <div class="w-full relative" data-topo-viewer data-topo-url="{{ route('routes.topo', $route) }}">
                                     <script type="application/json" data-topo-data>{!! json_encode($route->topo_data) !!}</script>

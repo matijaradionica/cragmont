@@ -884,5 +884,8 @@ function initTopo() {
     initTopoViewers().catch((err) => console.error(err));
 }
 
+// Allow other modules (offline loader) to re-run initialization after mutating DOM.
+window.__cragmontInitTopo = initTopo;
+
 document.addEventListener('DOMContentLoaded', initTopo);
 document.addEventListener('livewire:navigated', initTopo);
