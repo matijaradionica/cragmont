@@ -1,4 +1,5 @@
 let fabricPromise = null;
+let cropperPromise = null;
 
 async function loadFabric() {
     if (!fabricPromise) {
@@ -17,6 +18,33 @@ async function loadFabric() {
         });
     }
     return fabricPromise;
+}
+
+async function loadCropper() {
+    if (cropperPromise) return cropperPromise;
+
+    if (window.Cropper) {
+        cropperPromise = Promise.resolve(window.Cropper);
+        return cropperPromise;
+    }
+
+    cropperPromise = new Promise((resolve, reject) => {
+        const existing = document.querySelector('script[data-cropperjs]');
+        if (existing && window.Cropper) {
+            resolve(window.Cropper);
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js';
+        script.async = true;
+        script.dataset.cropperjs = 'true';
+        script.onload = () => (window.Cropper ? resolve(window.Cropper) : reject(new Error('Cropper failed to load')));
+        script.onerror = () => reject(new Error('Cropper failed to load'));
+        document.head.appendChild(script);
+    });
+
+    return cropperPromise;
 }
 
 function parseTopoData(rawValue) {
@@ -110,6 +138,10 @@ async function initTopoEditors() {
         const markerDescription = root.querySelector('[data-topo-marker-description]');
         const markerSave = root.querySelector('[data-topo-marker-save]');
         const markerCancelButtons = root.querySelectorAll('[data-topo-marker-cancel]');
+        const cropModal = root.querySelector('[data-topo-crop-modal]');
+        const cropImage = root.querySelector('[data-topo-crop-image]');
+        const cropApply = root.querySelector('[data-topo-crop-apply]');
+        const cropCancelButtons = root.querySelectorAll('[data-topo-crop-cancel]');
 
         if (!fileInput || !canvasElement || !wrap || !topoDataField) return;
 
@@ -122,6 +154,9 @@ async function initTopoEditors() {
         let currentImageUrl = null;
         let currentTool = 'draw';
         let pendingInfoMarker = null;
+        let cropper = null;
+        let cropObjectUrl = null;
+        let pendingCropFile = null;
 
         const canvas = new fabric.Canvas(canvasElement, {
             selection: true,
@@ -191,6 +226,44 @@ async function initTopoEditors() {
             pendingInfoMarker = null;
             markerModal.classList.add('hidden');
         }
+
+        const closeCropModal = () => {
+            if (!cropModal) return;
+            cropModal.classList.add('hidden');
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+            if (cropObjectUrl) {
+                URL.revokeObjectURL(cropObjectUrl);
+                cropObjectUrl = null;
+            }
+            pendingCropFile = null;
+        };
+
+        const openCropModal = async (file) => {
+            if (!cropModal || !cropImage) return false;
+            const Cropper = await loadCropper();
+
+            pendingCropFile = file;
+            cropModal.classList.remove('hidden');
+
+            cropObjectUrl = URL.createObjectURL(file);
+            cropImage.src = cropObjectUrl;
+
+            await new Promise((resolve) => {
+                cropImage.onload = resolve;
+            });
+
+            cropper = new Cropper(cropImage, {
+                viewMode: 1,
+                autoCropArea: 1,
+                responsive: true,
+                background: false,
+            });
+
+            return true;
+        };
 
         const pushHistory = () => {
             if (isRestoring) return;
@@ -351,6 +424,47 @@ async function initTopoEditors() {
             btn.addEventListener('click', () => closeMarkerModal());
         });
 
+        cropCancelButtons?.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                fileInput.value = '';
+                closeCropModal();
+            });
+        });
+
+        cropApply?.addEventListener('click', async () => {
+            if (!cropper || !pendingCropFile) return;
+
+            const croppedCanvas = cropper.getCroppedCanvas({
+                maxWidth: 2000,
+                maxHeight: 2000,
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high',
+            });
+
+            if (!croppedCanvas) return;
+
+            const blob = await new Promise((resolve) => croppedCanvas.toBlob(resolve, 'image/jpeg', 0.9));
+            if (!blob) return;
+
+            const croppedFile = new File([blob], 'topo.jpg', { type: blob.type });
+            const dt = new DataTransfer();
+            dt.items.add(croppedFile);
+            fileInput.files = dt.files;
+
+            topoDataField.value = 'null';
+            clearDrawing();
+
+            const objectUrl = URL.createObjectURL(croppedFile);
+            try {
+                await setBackgroundImageFromUrl(objectUrl);
+                saveTopoData();
+            } finally {
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
+            }
+
+            closeCropModal();
+        });
+
         canvas.on('path:created', () => {
             // Intentionally no-op; we re-handle below with markers.
         });
@@ -483,6 +597,13 @@ async function initTopoEditors() {
         fileInput.addEventListener('change', async () => {
             const file = fileInput.files?.[0];
             if (!file) return;
+
+            try {
+                const opened = await openCropModal(file);
+                if (opened) return;
+            } catch (err) {
+                console.warn('Cropper unavailable, falling back to original image.', err);
+            }
 
             topoDataField.value = 'null';
             clearDrawing();

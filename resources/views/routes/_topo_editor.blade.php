@@ -113,6 +113,35 @@
         </div>
     </div>
 
+    <div data-topo-crop-modal class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/60" data-topo-crop-cancel></div>
+        <div class="absolute inset-0 z-10 flex items-center justify-center p-4">
+            <div class="relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-lg bg-white shadow-lg border border-gray-200 p-3">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-sm font-semibold text-gray-900">Crop Topo Image</div>
+                    <button type="button" data-topo-crop-cancel
+                        class="text-gray-500 hover:text-gray-700 px-2 py-1"
+                        aria-label="Cancel">✕</button>
+                </div>
+
+                <div class="relative w-full max-h-[75vh] overflow-hidden bg-gray-50 rounded border border-gray-200">
+                    <img data-topo-crop-image alt="Crop topo" class="max-w-full">
+                </div>
+
+                <div class="mt-3 flex items-center justify-end gap-2">
+                    <button type="button" data-topo-crop-cancel
+                        class="inline-flex items-center px-3 py-1.5 bg-gray-200 text-gray-800 rounded-md text-xs uppercase tracking-widest hover:bg-gray-300">
+                        Cancel
+                    </button>
+                    <button type="button" data-topo-crop-apply
+                        class="inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white rounded-md text-xs uppercase tracking-widest hover:bg-indigo-700">
+                        Use Cropped Image
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @error('topo')
         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
     @enderror
@@ -120,3 +149,9 @@
         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
     @enderror
 </div>
+
+@once
+    @push('styles')
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+    @endpush
+@endonce
