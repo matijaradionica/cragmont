@@ -1,0 +1,203 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
+
+class Route extends Model
+{
+    protected $fillable = [
+        'name',
+        'location_id',
+        'created_by_user_id',
+        'length_m',
+        'pitch_count',
+        'grade_type',
+        'grade_value',
+        'risk_rating',
+        'approach_description',
+        'descent_description',
+        'required_gear',
+        'route_type',
+        'topo_url',
+        'status',
+    ];
+
+    protected $casts = [
+        'is_approved' => 'boolean',
+        'approved_at' => 'datetime',
+        'length_m' => 'integer',
+        'pitch_count' => 'integer',
+    ];
+
+    /**
+     * Boot the model.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($route) {
+            // Delete topo file when route is deleted
+            if ($route->topo_url) {
+                Storage::disk('public')->delete($route->topo_url);
+            }
+        });
+    }
+
+    /**
+     * Get the location of the route.
+     */
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
+    }
+
+    /**
+     * Get the user who created the route.
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    /**
+     * Get the user who approved the route.
+     */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by_user_id');
+    }
+
+    /**
+     * Get all photos for the route.
+     */
+    public function photos(): HasMany
+    {
+        return $this->hasMany(Photo::class);
+    }
+
+    /**
+     * Scope to get only approved routes.
+     */
+    public function scopeApproved($query)
+    {
+        return $query->where('is_approved', true);
+    }
+
+    /**
+     * Scope to get only pending routes.
+     */
+    public function scopePending($query)
+    {
+        return $query->where('is_approved', false);
+    }
+
+    /**
+     * Scope to filter by grade range.
+     */
+    public function scopeByGrade($query, $minGrade = null, $maxGrade = null)
+    {
+        if ($minGrade) {
+            $query->where('grade_value', '>=', $minGrade);
+        }
+
+        if ($maxGrade) {
+            $query->where('grade_value', '<=', $maxGrade);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Scope to filter by route type.
+     */
+    public function scopeByType($query, $type)
+    {
+        if ($type) {
+            return $query->where('route_type', $type);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Scope to filter by status.
+     */
+    public function scopeByStatus($query, $status)
+    {
+        if ($status) {
+            return $query->where('status', $status);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Scope to search routes by name.
+     */
+    public function scopeSearch($query, $searchTerm)
+    {
+        if ($searchTerm) {
+            return $query->where('name', 'like', '%' . $searchTerm . '%');
+        }
+
+        return $query;
+    }
+
+    /**
+     * Approve the route.
+     */
+    public function approve(User $approver): void
+    {
+        $this->is_approved = true;
+        $this->approved_by_user_id = $approver->id;
+        $this->approved_at = now();
+        $this->save();
+    }
+
+    /**
+     * Check if the route requires approval.
+     */
+    public function requiresApproval(): bool
+    {
+        return !$this->is_approved;
+    }
+
+    /**
+     * Get formatted grade display.
+     */
+    public function getGradeDisplay(): string
+    {
+        return "{$this->grade_type}: {$this->grade_value}";
+    }
+
+    /**
+     * Get the full location path.
+     */
+    public function getLocationPath(): string
+    {
+        return $this->location ? $this->location->getFullPath() : 'Unknown';
+    }
+
+    /**
+     * Check if the route can be edited by a user.
+     */
+    public function canBeEditedBy(User $user): bool
+    {
+        return $user->isAdmin()
+            || $user->isModerator()
+            || $this->created_by_user_id === $user->id;
+    }
+
+    /**
+     * Check if the route can be approved by a user.
+     */
+    public function canBeApprovedBy(User $user): bool
+    {
+        return $user->isAdmin() || $user->isModerator();
+    }
+}

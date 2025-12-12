@@ -1,0 +1,167 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\StoreRouteRequest;
+use App\Http\Requests\UpdateRouteRequest;
+use App\Models\Location;
+use App\Models\Route;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+
+class RouteController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $this->authorize('viewAny', Route::class);
+
+        // This view will use Livewire RouteSearch component for filtering
+        return view('routes.index');
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        $this->authorize('create', Route::class);
+
+        $locations = Location::orderBy('level')->orderBy('name')->get();
+
+        return view('routes.create', compact('locations'));
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(StoreRouteRequest $request)
+    {
+        $validated = $request->validated();
+
+        // Set the creator
+        $validated['created_by_user_id'] = auth()->id();
+
+        // Handle topo file upload
+        if ($request->hasFile('topo')) {
+            $path = $request->file('topo')->store('topos', 'public');
+            $validated['topo_url'] = $path;
+        }
+
+        // Auto-approve for Admin and Club/Equipper users
+        if (auth()->user()->canAutoApproveRoutes()) {
+            $validated['is_approved'] = true;
+            $validated['approved_by_user_id'] = auth()->id();
+            $validated['approved_at'] = now();
+        }
+
+        $route = Route::create($validated);
+
+        $message = $route->is_approved
+            ? 'Route created and approved successfully!'
+            : 'Route submitted for approval.';
+
+        return redirect()->route('routes.show', $route)
+            ->with('success', $message);
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Route $route)
+    {
+        $this->authorize('view', $route);
+
+        $route->load(['location', 'creator', 'approver', 'photos']);
+
+        return view('routes.show', compact('route'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Route $route)
+    {
+        $this->authorize('update', $route);
+
+        $locations = Location::orderBy('level')->orderBy('name')->get();
+
+        return view('routes.edit', compact('route', 'locations'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(UpdateRouteRequest $request, Route $route)
+    {
+        $validated = $request->validated();
+
+        // Handle topo file upload
+        if ($request->hasFile('topo')) {
+            // Delete old topo if it exists
+            if ($route->topo_url) {
+                Storage::disk('public')->delete($route->topo_url);
+            }
+
+            $path = $request->file('topo')->store('topos', 'public');
+            $validated['topo_url'] = $path;
+        }
+
+        // Trigger re-moderation if edited by non-admin/moderator
+        if (!auth()->user()->isAdmin() && !auth()->user()->isModerator()) {
+            $validated['is_approved'] = false;
+            $validated['approved_by_user_id'] = null;
+            $validated['approved_at'] = null;
+        }
+
+        $route->update($validated);
+
+        $message = !$route->is_approved
+            ? 'Changes saved. Route will need re-approval.'
+            : 'Route updated successfully!';
+
+        return redirect()->route('routes.show', $route)
+            ->with('success', $message);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Route $route)
+    {
+        $this->authorize('delete', $route);
+
+        $route->delete();
+
+        return redirect()->route('routes.index')
+            ->with('success', 'Route deleted successfully.');
+    }
+
+    /**
+     * Approve a pending route.
+     */
+    public function approve(Route $route)
+    {
+        $this->authorize('approve', $route);
+
+        $route->approve(auth()->user());
+
+        return back()->with('success', 'Route approved successfully!');
+    }
+
+    /**
+     * Reject a pending route.
+     */
+    public function reject(Route $route)
+    {
+        $this->authorize('approve', $route);
+
+        // For now, just delete the route
+        // In the future, you might want to add a rejection reason or soft delete
+        $route->delete();
+
+        return back()->with('success', 'Route rejected and removed.');
+    }
+}
