@@ -160,9 +160,10 @@
                         <div class="bg-white shadow rounded-lg p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-4">Topo Diagram</h3>
                             <div class="w-full rounded-lg border border-gray-300 bg-white p-2">
-                                <div class="w-full" data-topo-viewer data-topo-url="{{ route('routes.topo', $route) }}">
+                                <div class="w-full relative" data-topo-viewer data-topo-url="{{ route('routes.topo', $route) }}">
                                     <script type="application/json" data-topo-data>{!! json_encode($route->topo_data) !!}</script>
                                     <canvas data-topo-canvas></canvas>
+                                    <div data-topo-tooltip class="pointer-events-none hidden absolute z-10 max-w-xs rounded-md bg-gray-900 text-white text-xs px-2 py-1 shadow-lg"></div>
                                 </div>
                             </div>
                         </div>

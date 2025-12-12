@@ -2,7 +2,19 @@ let fabricPromise = null;
 
 async function loadFabric() {
     if (!fabricPromise) {
-        fabricPromise = import('https://cdn.jsdelivr.net/npm/fabric@6.9.0/+esm');
+        fabricPromise = import('https://cdn.jsdelivr.net/npm/fabric@6.9.0/+esm').then((fabric) => {
+            if (fabric.Object?.prototype?.toObject && !fabric.Object.prototype.__cragmontTopoPatched) {
+                const originalToObject = fabric.Object.prototype.toObject;
+                fabric.Object.prototype.toObject = function toObject(propertiesToInclude) {
+                    const base = originalToObject.call(this, propertiesToInclude);
+                    if (this.dataType) base.dataType = this.dataType;
+                    if (this.customData) base.customData = this.customData;
+                    return base;
+                };
+                fabric.Object.prototype.__cragmontTopoPatched = true;
+            }
+            return fabric;
+        });
     }
     return fabricPromise;
 }
@@ -78,8 +90,14 @@ async function initTopoEditors() {
         const undoButton = root.querySelector('[data-topo-undo]');
         const redoButton = root.querySelector('[data-topo-redo]');
         const clearButton = root.querySelector('[data-topo-clear]');
+        const toolButtons = root.querySelectorAll('[data-topo-tool]');
         const colorInput = root.querySelector('[data-topo-color]');
         const widthInput = root.querySelector('[data-topo-width]');
+        const markerModal = root.querySelector('[data-topo-marker-modal]');
+        const markerTitle = root.querySelector('[data-topo-marker-title]');
+        const markerDescription = root.querySelector('[data-topo-marker-description]');
+        const markerSave = root.querySelector('[data-topo-marker-save]');
+        const markerCancelButtons = root.querySelectorAll('[data-topo-marker-cancel]');
 
         if (!fileInput || !canvasElement || !wrap || !topoDataField) return;
 
@@ -90,11 +108,77 @@ async function initTopoEditors() {
         const redoStack = [];
         let isRestoring = false;
         let currentImageUrl = null;
+        let currentTool = 'draw';
+        let pendingInfoMarker = null;
 
         const canvas = new fabric.Canvas(canvasElement, {
             selection: true,
             preserveObjectStacking: true,
         });
+
+        function setTool(tool) {
+            currentTool = tool;
+            const isDraw = tool === 'draw';
+            canvas.isDrawingMode = isDraw;
+            if (isDraw) {
+                canvas.selection = true;
+                canvas.defaultCursor = 'default';
+                setBrush();
+                canvas.getObjects().forEach((obj) => {
+                    obj.selectable = true;
+                    obj.evented = true;
+                });
+            } else {
+                canvas.selection = false;
+                canvas.defaultCursor = 'crosshair';
+                canvas.getObjects().forEach((obj) => {
+                    if (obj.dataType === 'info-marker') {
+                        obj.selectable = false;
+                        obj.evented = true;
+                        obj.hoverCursor = 'pointer';
+                        return;
+                    }
+                    obj.selectable = false;
+                    obj.evented = false;
+                });
+            }
+
+            toolButtons?.forEach((btn) => {
+                const isActive = btn.getAttribute('data-topo-tool') === tool;
+                btn.classList.toggle('bg-indigo-600', isActive);
+                btn.classList.toggle('text-white', isActive);
+                btn.classList.toggle('hover:bg-indigo-700', isActive);
+                btn.classList.toggle('bg-gray-200', !isActive);
+                btn.classList.toggle('text-gray-800', !isActive);
+                btn.classList.toggle('hover:bg-gray-300', !isActive);
+            });
+        }
+
+        function openMarkerModal(marker) {
+            if (!markerModal || !markerTitle || !markerDescription || !markerSave) return;
+            pendingInfoMarker = marker;
+            markerTitle.value = marker?.customData?.title ?? '';
+            markerDescription.value = marker?.customData?.description ?? '';
+            markerModal.classList.remove('hidden');
+            markerTitle.focus();
+        }
+
+        function closeMarkerModal() {
+            if (!markerModal) return;
+            if (pendingInfoMarker?.__cragmontNew) {
+                const hasData = Boolean(
+                    pendingInfoMarker.customData?.title?.trim() || pendingInfoMarker.customData?.description?.trim()
+                );
+                if (!hasData) {
+                    canvas.remove(pendingInfoMarker);
+                    canvas.requestRenderAll();
+                    pushHistory();
+                    saveTopoData();
+                }
+            }
+            pendingInfoMarker = null;
+            markerModal.classList.add('hidden');
+        }
 
         const pushHistory = () => {
             if (isRestoring) return;
@@ -106,12 +190,12 @@ async function initTopoEditors() {
             redoStack.length = 0;
         };
 
-        const setBrush = () => {
+        function setBrush() {
             canvas.isDrawingMode = true;
             canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
             canvas.freeDrawingBrush.color = colorInput?.value ?? '#ef4444';
             canvas.freeDrawingBrush.width = Number(widthInput?.value ?? 6);
-        };
+        }
 
         const setCanvasCssSize = () => {
             const rect = wrap.getBoundingClientRect();
@@ -163,7 +247,7 @@ async function initTopoEditors() {
             const { width, height } = topoData.base;
             canvas.setDimensions({ width, height });
             setCanvasCssSize();
-            setBrush();
+            setTool(currentTool);
             await restoreSnapshot(topoData.fabric);
             pushHistory();
         };
@@ -191,7 +275,7 @@ async function initTopoEditors() {
 
             setBackgroundImageCompat(canvas, img);
             setCanvasCssSize();
-            setBrush();
+            setTool(currentTool);
             pushHistory();
 
             const existing = String(topoDataField.value ?? '').trim();
@@ -224,6 +308,10 @@ async function initTopoEditors() {
 
         clearButton?.addEventListener('click', () => clearDrawing());
 
+        toolButtons?.forEach((btn) => {
+            btn.addEventListener('click', () => setTool(btn.getAttribute('data-topo-tool') || 'draw'));
+        });
+
         colorInput?.addEventListener('input', (e) => {
             if (!canvas.freeDrawingBrush) return;
             canvas.freeDrawingBrush.color = e.target.value;
@@ -232,6 +320,23 @@ async function initTopoEditors() {
         widthInput?.addEventListener('input', (e) => {
             if (!canvas.freeDrawingBrush) return;
             canvas.freeDrawingBrush.width = Number(e.target.value);
+        });
+
+        markerSave?.addEventListener('click', () => {
+            if (!pendingInfoMarker) return;
+            pendingInfoMarker.customData = {
+                title: markerTitle?.value?.trim() ?? '',
+                description: markerDescription?.value?.trim() ?? '',
+            };
+            pendingInfoMarker.__cragmontNew = false;
+            canvas.requestRenderAll();
+            pushHistory();
+            saveTopoData();
+            closeMarkerModal();
+        });
+
+        markerCancelButtons?.forEach((btn) => {
+            btn.addEventListener('click', () => closeMarkerModal());
         });
 
         canvas.on('path:created', () => {
@@ -297,6 +402,40 @@ async function initTopoEditors() {
             pushHistory();
             saveTopoData();
         });
+
+        canvas.on('mouse:down', (event) => {
+            if (currentTool !== 'info') return;
+            if (!canvas.backgroundImage) return;
+
+            const target = event?.target;
+            if (target?.dataType === 'info-marker') {
+                openMarkerModal(target);
+                return;
+            }
+
+            const pointer = canvas.getPointer(event.e);
+            const markerColor = colorInput?.value ?? '#ef4444';
+            const marker = new fabric.Circle({
+                left: pointer.x,
+                top: pointer.y,
+                originX: 'center',
+                originY: 'center',
+                radius: 7,
+                fill: markerColor,
+                stroke: '#ffffff',
+                strokeWidth: 2,
+                selectable: false,
+                evented: true,
+                hoverCursor: 'pointer',
+            });
+            marker.dataType = 'info-marker';
+            marker.customData = { title: '', description: '' };
+            marker.__cragmontNew = true;
+            canvas.add(marker);
+            canvas.requestRenderAll();
+            openMarkerModal(marker);
+        });
+
         canvas.on('object:modified', () => {
             pushHistory();
             saveTopoData();
@@ -331,7 +470,7 @@ async function initTopoEditors() {
             } else {
                 canvas.setDimensions({ width: 800, height: 500 });
                 setCanvasCssSize();
-                setBrush();
+                setTool('draw');
                 pushHistory();
             }
 
@@ -363,13 +502,14 @@ async function initTopoViewers() {
         const topoUrl = root.getAttribute('data-topo-url') || null;
         const topoDataField = root.querySelector('[data-topo-data]');
         const topoData = parseTopoData(readTopoDataFromElement(topoDataField));
+        const tooltip = root.querySelector('[data-topo-tooltip]');
 
         if (!canvasElement || !topoUrl) return;
 
         root.dataset.topoInitialized = 'true';
 
         const MAX_BASE_DIMENSION = 2000;
-        const canvas = new fabric.StaticCanvas(canvasElement, {
+        const canvas = new fabric.Canvas(canvasElement, {
             selection: false,
             renderOnAddRemove: true,
         });
@@ -384,10 +524,56 @@ async function initTopoViewers() {
         };
 
         const applyReadOnly = () => {
+            canvas.selection = false;
+            canvas.defaultCursor = 'default';
+            canvas.hoverCursor = 'default';
+            canvas.moveCursor = 'default';
+
             canvas.getObjects().forEach((obj) => {
+                const isInfoMarker = obj.dataType === 'info-marker';
+
                 obj.selectable = false;
-                obj.evented = false;
+                obj.evented = isInfoMarker;
+                obj.hasControls = false;
+                obj.hasBorders = false;
+                obj.lockMovementX = true;
+                obj.lockMovementY = true;
+                obj.lockRotation = true;
+                obj.lockScalingFlip = true;
+                obj.lockScalingX = true;
+                obj.lockScalingY = true;
+                obj.hoverCursor = isInfoMarker ? 'pointer' : 'default';
             });
+        };
+
+        const escapeHtml = (value) =>
+            String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+
+        const hideTooltip = () => {
+            if (!tooltip) return;
+            tooltip.classList.add('hidden');
+        };
+
+        const showTooltip = (event, marker) => {
+            if (!tooltip) return;
+            const data = marker?.customData;
+            if (!data?.title && !data?.description) return;
+
+            const rect = root.getBoundingClientRect();
+            const x = (event?.e?.clientX ?? rect.left) - rect.left + 10;
+            const y = (event?.e?.clientY ?? rect.top) - rect.top + 10;
+
+            const title = data?.title ? `<div class="font-semibold mb-0.5">${escapeHtml(data.title)}</div>` : '';
+            const desc = data?.description ? `<div class="whitespace-pre-wrap">${escapeHtml(data.description)}</div>` : '';
+            tooltip.innerHTML = `${title}${desc}`;
+            tooltip.style.left = `${Math.round(x)}px`;
+            tooltip.style.top = `${Math.round(y)}px`;
+            tooltip.classList.remove('hidden');
         };
 
         const load = async () => {
@@ -431,6 +617,16 @@ async function initTopoViewers() {
             } else {
                 applyReadOnly();
             }
+
+            canvas.on('mouse:move', (ev) => {
+                const target = ev?.target;
+                if (target?.dataType === 'info-marker') {
+                    showTooltip(ev, target);
+                } else {
+                    hideTooltip();
+                }
+            });
+            canvas.on('mouse:out', () => hideTooltip());
 
             window.addEventListener('resize', () => setCanvasCssSize());
         };
