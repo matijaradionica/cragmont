@@ -56,6 +56,11 @@ function setBackgroundImageCompat(canvas, img) {
     canvas.requestRenderAll();
 }
 
+function lockCanvasScroll(isLocked) {
+    document.documentElement.classList.toggle('overflow-hidden', isLocked);
+    document.body.classList.toggle('overflow-hidden', isLocked);
+}
+
 function getLastPathPoint(pathCommands) {
     for (let i = pathCommands.length - 1; i >= 0; i -= 1) {
         const cmd = pathCommands[i];
@@ -503,78 +508,97 @@ async function initTopoViewers() {
         const topoDataField = root.querySelector('[data-topo-data]');
         const topoData = parseTopoData(readTopoDataFromElement(topoDataField));
         const tooltip = root.querySelector('[data-topo-tooltip]');
+        const lightboxOpen = root.querySelector('[data-topo-lightbox-open]');
+        const lightbox = root.querySelector('[data-topo-lightbox]');
+        const lightboxCanvasElement = root.querySelector('canvas[data-topo-lightbox-canvas]');
+        const lightboxTooltip = root.querySelector('[data-topo-lightbox-tooltip]');
+        const lightboxCloseButtons = root.querySelectorAll('[data-topo-lightbox-close]');
 
         if (!canvasElement || !topoUrl) return;
 
         root.dataset.topoInitialized = 'true';
 
         const MAX_BASE_DIMENSION = 2000;
-        const canvas = new fabric.Canvas(canvasElement, {
-            selection: false,
-            renderOnAddRemove: true,
-        });
+        const createViewer = (viewerRoot, element, tooltipElement) => {
+            const viewerCanvas = new fabric.Canvas(element, { selection: false, renderOnAddRemove: true });
 
-        const setCanvasCssSize = () => {
-            const rect = root.getBoundingClientRect();
-            if (!rect.width || !canvas.width || !canvas.height) return;
-            const cssWidth = rect.width;
-            const cssHeight = Math.round(cssWidth * (canvas.height / canvas.width));
-            canvas.setDimensions({ width: cssWidth, height: cssHeight }, { cssOnly: true });
-            canvas.calcOffset();
-        };
+            const setCanvasCssSize = () => {
+                const rect = viewerRoot.getBoundingClientRect();
+                if (!rect.width || !viewerCanvas.width || !viewerCanvas.height) return;
+                const cssWidth = rect.width;
+                const cssHeight = Math.round(cssWidth * (viewerCanvas.height / viewerCanvas.width));
+                viewerCanvas.setDimensions({ width: cssWidth, height: cssHeight }, { cssOnly: true });
+                viewerCanvas.calcOffset();
+            };
 
-        const applyReadOnly = () => {
-            canvas.selection = false;
-            canvas.defaultCursor = 'default';
-            canvas.hoverCursor = 'default';
-            canvas.moveCursor = 'default';
+            const applyReadOnly = () => {
+                viewerCanvas.selection = false;
+                viewerCanvas.defaultCursor = 'default';
+                viewerCanvas.hoverCursor = 'default';
+                viewerCanvas.moveCursor = 'default';
 
-            canvas.getObjects().forEach((obj) => {
-                const isInfoMarker = obj.dataType === 'info-marker';
+                viewerCanvas.getObjects().forEach((obj) => {
+                    const isInfoMarker = obj.dataType === 'info-marker';
 
-                obj.selectable = false;
-                obj.evented = isInfoMarker;
-                obj.hasControls = false;
-                obj.hasBorders = false;
-                obj.lockMovementX = true;
-                obj.lockMovementY = true;
-                obj.lockRotation = true;
-                obj.lockScalingFlip = true;
-                obj.lockScalingX = true;
-                obj.lockScalingY = true;
-                obj.hoverCursor = isInfoMarker ? 'pointer' : 'default';
+                    obj.selectable = false;
+                    obj.evented = isInfoMarker;
+                    obj.hasControls = false;
+                    obj.hasBorders = false;
+                    obj.lockMovementX = true;
+                    obj.lockMovementY = true;
+                    obj.lockRotation = true;
+                    obj.lockScalingFlip = true;
+                    obj.lockScalingX = true;
+                    obj.lockScalingY = true;
+                    obj.hoverCursor = isInfoMarker ? 'pointer' : 'default';
+                });
+            };
+
+            const escapeHtml = (value) =>
+                String(value)
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#039;');
+
+            const hideTooltip = () => {
+                if (!tooltipElement) return;
+                tooltipElement.classList.add('hidden');
+            };
+
+            const showTooltip = (event, marker) => {
+                if (!tooltipElement) return;
+                const data = marker?.customData;
+                if (!data?.title && !data?.description) return;
+
+                const rect = viewerRoot.getBoundingClientRect();
+                const x = (event?.e?.clientX ?? rect.left) - rect.left + 10;
+                const y = (event?.e?.clientY ?? rect.top) - rect.top + 10;
+
+                const title = data?.title ? `<div class="font-semibold mb-0.5">${escapeHtml(data.title)}</div>` : '';
+                const desc = data?.description ? `<div class="whitespace-pre-wrap">${escapeHtml(data.description)}</div>` : '';
+                tooltipElement.innerHTML = `${title}${desc}`;
+                tooltipElement.style.left = `${Math.round(x)}px`;
+                tooltipElement.style.top = `${Math.round(y)}px`;
+                tooltipElement.classList.remove('hidden');
+            };
+
+            viewerCanvas.on('mouse:move', (ev) => {
+                const target = ev?.target;
+                if (target?.dataType === 'info-marker') {
+                    showTooltip(ev, target);
+                } else {
+                    hideTooltip();
+                }
             });
+            viewerCanvas.on('mouse:out', () => hideTooltip());
+
+            return { viewerCanvas, setCanvasCssSize, applyReadOnly };
         };
 
-        const escapeHtml = (value) =>
-            String(value)
-                .replaceAll('&', '&amp;')
-                .replaceAll('<', '&lt;')
-                .replaceAll('>', '&gt;')
-                .replaceAll('"', '&quot;')
-                .replaceAll("'", '&#039;');
-
-        const hideTooltip = () => {
-            if (!tooltip) return;
-            tooltip.classList.add('hidden');
-        };
-
-        const showTooltip = (event, marker) => {
-            if (!tooltip) return;
-            const data = marker?.customData;
-            if (!data?.title && !data?.description) return;
-
-            const rect = root.getBoundingClientRect();
-            const x = (event?.e?.clientX ?? rect.left) - rect.left + 10;
-            const y = (event?.e?.clientY ?? rect.top) - rect.top + 10;
-
-            const title = data?.title ? `<div class="font-semibold mb-0.5">${escapeHtml(data.title)}</div>` : '';
-            const desc = data?.description ? `<div class="whitespace-pre-wrap">${escapeHtml(data.description)}</div>` : '';
-            tooltip.innerHTML = `${title}${desc}`;
-            tooltip.style.left = `${Math.round(x)}px`;
-            tooltip.style.top = `${Math.round(y)}px`;
-            tooltip.classList.remove('hidden');
-        };
+        const smallViewer = createViewer(root, canvasElement, tooltip);
+        let largeViewer = null;
 
         const load = async () => {
             const img = await fabric.FabricImage.fromURL(topoUrl, { crossOrigin: 'anonymous' });
@@ -596,7 +620,7 @@ async function initTopoViewers() {
                 baseHeight = Math.round(naturalHeight * scale);
             }
 
-            canvas.setDimensions({ width: baseWidth, height: baseHeight });
+            smallViewer.viewerCanvas.setDimensions({ width: baseWidth, height: baseHeight });
             img.set({
                 left: 0,
                 top: 0,
@@ -606,30 +630,87 @@ async function initTopoViewers() {
                 evented: false,
             });
 
-            setBackgroundImageCompat(canvas, img);
-            setCanvasCssSize();
+            setBackgroundImageCompat(smallViewer.viewerCanvas, img);
+            smallViewer.setCanvasCssSize();
 
             if (topoData?.fabric?.objects) {
-                await canvas.loadFromJSON(topoData.fabric);
-                setBackgroundImageCompat(canvas, img);
-                applyReadOnly();
-                canvas.requestRenderAll();
+                await smallViewer.viewerCanvas.loadFromJSON(topoData.fabric);
+                setBackgroundImageCompat(smallViewer.viewerCanvas, img);
+                smallViewer.applyReadOnly();
+                smallViewer.viewerCanvas.requestRenderAll();
             } else {
-                applyReadOnly();
+                smallViewer.applyReadOnly();
             }
-
-            canvas.on('mouse:move', (ev) => {
-                const target = ev?.target;
-                if (target?.dataType === 'info-marker') {
-                    showTooltip(ev, target);
-                } else {
-                    hideTooltip();
-                }
-            });
-            canvas.on('mouse:out', () => hideTooltip());
-
-            window.addEventListener('resize', () => setCanvasCssSize());
+            window.addEventListener('resize', () => smallViewer.setCanvasCssSize());
         };
+
+        const openLightbox = async () => {
+            if (!lightbox || !lightboxCanvasElement) return;
+            lightbox.classList.remove('hidden');
+            lockCanvasScroll(true);
+
+            if (!largeViewer) {
+                const lightboxContainer = lightboxCanvasElement.parentElement ?? lightbox;
+                largeViewer = createViewer(lightboxContainer, lightboxCanvasElement, lightboxTooltip);
+
+                const img = await fabric.FabricImage.fromURL(topoUrl, { crossOrigin: 'anonymous' });
+                const naturalWidth = img.width ?? 0;
+                const naturalHeight = img.height ?? 0;
+                if (!naturalWidth || !naturalHeight) return;
+
+                let baseWidth = naturalWidth;
+                let baseHeight = naturalHeight;
+                let scale = 1;
+
+                if (topoData?.base?.width && topoData?.base?.height) {
+                    baseWidth = topoData.base.width;
+                    baseHeight = topoData.base.height;
+                    scale = topoData.base.scale ?? (baseWidth / naturalWidth);
+                } else {
+                    scale = Math.min(1, MAX_BASE_DIMENSION / naturalWidth, MAX_BASE_DIMENSION / naturalHeight);
+                    baseWidth = Math.round(naturalWidth * scale);
+                    baseHeight = Math.round(naturalHeight * scale);
+                }
+
+                largeViewer.viewerCanvas.setDimensions({ width: baseWidth, height: baseHeight });
+                img.set({
+                    left: 0,
+                    top: 0,
+                    scaleX: scale,
+                    scaleY: scale,
+                    selectable: false,
+                    evented: false,
+                });
+
+                setBackgroundImageCompat(largeViewer.viewerCanvas, img);
+                largeViewer.setCanvasCssSize();
+
+                if (topoData?.fabric?.objects) {
+                    await largeViewer.viewerCanvas.loadFromJSON(topoData.fabric);
+                    setBackgroundImageCompat(largeViewer.viewerCanvas, img);
+                    largeViewer.applyReadOnly();
+                    largeViewer.viewerCanvas.requestRenderAll();
+                } else {
+                    largeViewer.applyReadOnly();
+                }
+
+                window.addEventListener('resize', () => largeViewer?.setCanvasCssSize());
+            } else {
+                largeViewer.setCanvasCssSize();
+            }
+        };
+
+        const closeLightbox = () => {
+            if (!lightbox) return;
+            lightbox.classList.add('hidden');
+            lockCanvasScroll(false);
+        };
+
+        lightboxOpen?.addEventListener('click', () => openLightbox().catch((err) => console.error(err)));
+        lightboxCloseButtons?.forEach((btn) => btn.addEventListener('click', () => closeLightbox()));
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeLightbox();
+        });
 
         load().catch((err) => console.error('Topo viewer load failed', err));
     });
