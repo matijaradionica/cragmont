@@ -46,6 +46,15 @@ Route::middleware('auth')->group(function () {
     Route::get('users/{user}/avatar', [UserAvatarController::class, 'show'])
         ->name('users.avatar');
 
+    Route::get('routes/{route}/topo', [RouteTopoController::class, 'show'])
+        ->name('routes.topo');
+
+    Route::get('routes/{route}/photos/{photo}', [RoutePhotoController::class, 'show'])
+        ->name('routes.photos.show');
+
+    Route::get('users/{user}/avatar', [UserAvatarController::class, 'show'])
+        ->name('users.avatar');
+
     // Additional route management actions
     Route::post('routes/{route}/approve', [RouteController::class, 'approve'])
         ->name('routes.approve')
