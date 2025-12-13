@@ -29,9 +29,22 @@ Route::middleware('auth')->group(function () {
     Route::resource('locations', LocationController::class);
 });
 
-// Route routes - authenticated users can view and create, policies control edit/delete
+// Routes list is public (pending routes remain restricted by policy)
+Route::get('routes', [RouteController::class, 'index'])->name('routes.index');
+
+// Route assets are public for approved routes (policy-enforced) and must be defined before the show route.
+Route::get('routes/{route}/topo', [RouteTopoController::class, 'show'])
+    ->name('routes.topo');
+
+Route::get('routes/{route}/photos/{photo}', [RoutePhotoController::class, 'show'])
+    ->name('routes.photos.show');
+
+// Route management actions require login; policies control edit/delete
 Route::middleware('auth')->group(function () {
-    Route::resource('routes', RouteController::class);
+    Route::resource('routes', RouteController::class)->except(['index', 'show']);
+
+    Route::get('users/{user}/avatar', [UserAvatarController::class, 'show'])
+        ->name('users.avatar');
 
     Route::get('routes/{route}/topo', [RouteTopoController::class, 'show'])
         ->name('routes.topo');
@@ -51,6 +64,9 @@ Route::middleware('auth')->group(function () {
         ->name('routes.reject')
         ->middleware('can:approve,route');
 });
+
+// Routes detail is public; defined after the management routes so `/routes/create` is not captured.
+Route::get('routes/{route}', [RouteController::class, 'show'])->name('routes.show');
 
 // Ascent (Logbook) routes - authenticated users can manage their own ascents
 Route::middleware('auth')->group(function () {

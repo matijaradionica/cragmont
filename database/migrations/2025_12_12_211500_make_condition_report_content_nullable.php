@@ -16,4 +16,3 @@ return new class extends Migration
         DB::statement('ALTER TABLE condition_reports MODIFY content TEXT NOT NULL');
     }
 };
-

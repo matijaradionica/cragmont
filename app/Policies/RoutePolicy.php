@@ -11,9 +11,9 @@ class RoutePolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(?User $user): bool
     {
-        // All authenticated users can view routes list
+        // Anyone can view the routes list (pending routes are still restricted elsewhere)
         return true;
     }
 
