@@ -162,6 +162,7 @@ async function initTopoEditors() {
             selection: true,
             preserveObjectStacking: true,
         });
+        canvas.targetFindTolerance = 18;
 
         function setTool(tool) {
             currentTool = tool;
@@ -672,6 +673,27 @@ async function initTopoViewers() {
         const MAX_BASE_DIMENSION = 2000;
         const createViewer = (viewerRoot, element, tooltipElement) => {
             const viewerCanvas = new fabric.Canvas(element, { selection: false, renderOnAddRemove: true });
+            viewerCanvas.targetFindTolerance = 22;
+            viewerCanvas.upperCanvasEl.style.touchAction = 'none';
+
+            const MIN_ZOOM = 0.75;
+            const MAX_ZOOM = 6;
+            const clampZoom = (zoom) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
+            const getCanvasScaleFromRect = () => {
+                const rect = viewerCanvas.upperCanvasEl.getBoundingClientRect();
+                if (!rect.width || !rect.height || !viewerCanvas.width || !viewerCanvas.height) {
+                    return { rect, scaleX: 1, scaleY: 1 };
+                }
+                return {
+                    rect,
+                    scaleX: viewerCanvas.width / rect.width,
+                    scaleY: viewerCanvas.height / rect.height,
+                };
+            };
+            const getCanvasPointFromClient = (clientX, clientY) => {
+                const { rect, scaleX, scaleY } = getCanvasScaleFromRect();
+                return new fabric.Point((clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY);
+            };
 
             const setCanvasCssSize = () => {
                 const rect = viewerRoot.getBoundingClientRect();
@@ -744,7 +766,81 @@ async function initTopoViewers() {
                 tooltipElement.classList.remove('hidden');
             };
 
+            const showTooltipForMarker = (marker) => {
+                if (!tooltipElement) return;
+                const data = marker?.customData;
+                if (!data?.title && !data?.description) return;
+
+                const center = marker.getCenterPoint();
+                const viewportPoint = fabric.util.transformPoint(center, viewerCanvas.viewportTransform);
+                const canvasRect = viewerCanvas.upperCanvasEl.getBoundingClientRect();
+                const rootRect = viewerRoot.getBoundingClientRect();
+
+                const x = rootRect.left + (viewportPoint.x / (viewerCanvas.width || 1)) * canvasRect.width;
+                const y = rootRect.top + (viewportPoint.y / (viewerCanvas.height || 1)) * canvasRect.height;
+
+                const title = data?.title ? `<div class="font-semibold mb-0.5">${escapeHtml(data.title)}</div>` : '';
+                const desc = data?.description ? `<div class="whitespace-pre-wrap">${escapeHtml(data.description)}</div>` : '';
+                tooltipElement.innerHTML = `${title}${desc}`;
+                tooltipElement.style.left = `${Math.round(x - rootRect.left + 10)}px`;
+                tooltipElement.style.top = `${Math.round(y - rootRect.top + 10)}px`;
+                tooltipElement.classList.remove('hidden');
+            };
+
+            const interaction = {
+                isPanning: false,
+                lastClientX: 0,
+                lastClientY: 0,
+                pinnedMarker: null,
+            };
+
+            const clearPinnedTooltip = () => {
+                interaction.pinnedMarker = null;
+                hideTooltip();
+            };
+
+            viewerCanvas.on('mouse:down', (ev) => {
+                if (pinchState.active || activePointers.size >= 2) return;
+                const markerTarget = getInfoMarkerTarget(ev?.target);
+                if (markerTarget) {
+                    if (interaction.pinnedMarker === markerTarget && tooltipElement && !tooltipElement.classList.contains('hidden')) {
+                        clearPinnedTooltip();
+                        return;
+                    }
+                    interaction.pinnedMarker = markerTarget;
+                    showTooltipForMarker(markerTarget);
+                    return;
+                }
+
+                clearPinnedTooltip();
+                const e = ev?.e;
+                if (!e) return;
+                interaction.isPanning = true;
+                interaction.lastClientX = e.clientX;
+                interaction.lastClientY = e.clientY;
+                viewerCanvas.defaultCursor = 'grabbing';
+            });
+
             viewerCanvas.on('mouse:move', (ev) => {
+                if (pinchState.active || activePointers.size >= 2) return;
+                if (interaction.isPanning) {
+                    const e = ev?.e;
+                    if (!e) return;
+                    const dx = e.clientX - interaction.lastClientX;
+                    const dy = e.clientY - interaction.lastClientY;
+                    interaction.lastClientX = e.clientX;
+                    interaction.lastClientY = e.clientY;
+
+                    const { scaleX, scaleY } = getCanvasScaleFromRect();
+                    const vpt = viewerCanvas.viewportTransform;
+                    vpt[4] += dx * scaleX;
+                    vpt[5] += dy * scaleY;
+                    viewerCanvas.requestRenderAll();
+                    if (interaction.pinnedMarker) showTooltipForMarker(interaction.pinnedMarker);
+                    return;
+                }
+
+                if (interaction.pinnedMarker) return;
                 const markerTarget = getInfoMarkerTarget(ev?.target);
                 if (markerTarget) {
                     showTooltip(ev, markerTarget);
@@ -752,7 +848,77 @@ async function initTopoViewers() {
                     hideTooltip();
                 }
             });
-            viewerCanvas.on('mouse:out', () => hideTooltip());
+            viewerCanvas.on('mouse:up', () => {
+                interaction.isPanning = false;
+                viewerCanvas.defaultCursor = 'default';
+                if (interaction.pinnedMarker) showTooltipForMarker(interaction.pinnedMarker);
+            });
+            viewerCanvas.on('mouse:out', () => {
+                if (interaction.isPanning || interaction.pinnedMarker) return;
+                hideTooltip();
+            });
+
+            viewerCanvas.on('mouse:wheel', (opt) => {
+                const e = opt?.e;
+                if (!e) return;
+                e.preventDefault();
+                e.stopPropagation();
+
+                const delta = e.deltaY;
+                const zoom = viewerCanvas.getZoom();
+                const nextZoom = clampZoom(zoom * Math.pow(0.999, delta));
+                const point = getCanvasPointFromClient(e.clientX, e.clientY);
+                viewerCanvas.zoomToPoint(point, nextZoom);
+                viewerCanvas.requestRenderAll();
+                if (interaction.pinnedMarker) showTooltipForMarker(interaction.pinnedMarker);
+            });
+
+            const activePointers = new Map();
+            const pinchState = { active: false, startDistance: 0, startZoom: 1 };
+
+            const onPointerDown = (e) => {
+                activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+                if (activePointers.size === 2) {
+                    const points = Array.from(activePointers.values());
+                    pinchState.active = true;
+                    pinchState.startZoom = viewerCanvas.getZoom();
+                    pinchState.startDistance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) || 1;
+                }
+            };
+            const onPointerMove = (e) => {
+                if (!activePointers.has(e.pointerId)) return;
+                activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+                if (!pinchState.active || activePointers.size !== 2) return;
+
+                e.preventDefault();
+                const points = Array.from(activePointers.values());
+                const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) || 1;
+                const scale = distance / pinchState.startDistance;
+                const nextZoom = clampZoom(pinchState.startZoom * scale);
+
+                const centerX = (points[0].x + points[1].x) / 2;
+                const centerY = (points[0].y + points[1].y) / 2;
+                const point = getCanvasPointFromClient(centerX, centerY);
+                viewerCanvas.zoomToPoint(point, nextZoom);
+                viewerCanvas.requestRenderAll();
+                if (interaction.pinnedMarker) showTooltipForMarker(interaction.pinnedMarker);
+            };
+            const onPointerUp = (e) => {
+                activePointers.delete(e.pointerId);
+                if (activePointers.size < 2) pinchState.active = false;
+            };
+
+            viewerCanvas.upperCanvasEl.addEventListener('pointerdown', onPointerDown);
+            viewerCanvas.upperCanvasEl.addEventListener('pointermove', onPointerMove, { passive: false });
+            viewerCanvas.upperCanvasEl.addEventListener('pointerup', onPointerUp);
+            viewerCanvas.upperCanvasEl.addEventListener('pointercancel', onPointerUp);
+
+            viewerCanvas.upperCanvasEl.addEventListener('dblclick', () => {
+                viewerCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+                viewerCanvas.setZoom(1);
+                viewerCanvas.requestRenderAll();
+                if (interaction.pinnedMarker) showTooltipForMarker(interaction.pinnedMarker);
+            });
 
             return { viewerCanvas, setCanvasCssSize, applyReadOnly };
         };
