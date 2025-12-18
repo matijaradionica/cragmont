@@ -236,16 +236,6 @@
                                 <dt class="text-sm font-medium text-gray-500">Created on</dt>
                                 <dd class="mt-1 text-sm text-gray-900">{{ $route->created_at->format('M d, Y') }}</dd>
                             </div>
-                            @if($route->is_approved && $route->approver)
-                                <div>
-                                    <dt class="text-sm font-medium text-gray-500">Approved by</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ $route->approver->name }}</dd>
-                                </div>
-                                <div>
-                                    <dt class="text-sm font-medium text-gray-500">Approved on</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ $route->approved_at->format('M d, Y') }}</dd>
-                                </div>
-                            @endif
                         </dl>
                     </div>
                 </div>

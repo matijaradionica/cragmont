@@ -102,8 +102,6 @@ class RouteFactory extends Factory
             'Alpine' => $alpineGear,
         ];
 
-        $isApproved = fake()->boolean(75); // 75% approved, 25% pending
-
         return [
             'name' => fake()->randomElement($prefixes) . ' ' . fake()->randomElement($suffixes),
             'location_id' => Location::inRandomOrder()->first()?->id ?? Location::factory(),
@@ -118,34 +116,7 @@ class RouteFactory extends Factory
             'required_gear' => fake()->randomElement($gearByType[$routeType]),
             'route_type' => $routeType,
             'status' => $status,
-            'is_approved' => $isApproved,
-            'approved_at' => $isApproved ? fake()->dateTimeBetween('-6 months', 'now') : null,
-            'approved_by_user_id' => $isApproved ? User::inRandomOrder()->first()?->id : null,
         ];
-    }
-
-    /**
-     * Indicate that the route is approved.
-     */
-    public function approved(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'is_approved' => true,
-            'approved_at' => fake()->dateTimeBetween('-6 months', 'now'),
-            'approved_by_user_id' => User::inRandomOrder()->first()?->id,
-        ]);
-    }
-
-    /**
-     * Indicate that the route is pending approval.
-     */
-    public function pending(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'is_approved' => false,
-            'approved_at' => null,
-            'approved_by_user_id' => null,
-        ]);
     }
 
     /**

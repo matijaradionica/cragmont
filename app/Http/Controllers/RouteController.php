@@ -78,11 +78,6 @@ class RouteController extends Controller
             $validated['status'] = $validated['status'] ?? 'New';
         }
 
-        // Auto-approve all routes (no approval needed)
-        $validated['is_approved'] = true;
-        $validated['approved_by_user_id'] = auth()->id();
-        $validated['approved_at'] = now();
-
         $route = Route::create($validated);
 
         $uploadedPhotos = $request->file('photos', []);
@@ -116,7 +111,7 @@ class RouteController extends Controller
     {
         $this->authorize('view', $route);
 
-        $route->load(['location', 'creator', 'approver', 'photos', 'ratings.user']);
+        $route->load(['location', 'creator', 'photos', 'ratings.user']);
 
         // Load top-level comments with replies
         $comments = $route->comments()

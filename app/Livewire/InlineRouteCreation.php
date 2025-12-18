@@ -116,7 +116,7 @@ class InlineRouteCreation extends Component
     {
         $this->validate();
 
-        // Create route with auto-approval (as per requirement #3: Option B)
+        // Create route
         $routeData = [
             'name' => $this->name,
             'location_id' => $this->location_id,
@@ -131,10 +131,6 @@ class InlineRouteCreation extends Component
             'descent_description' => $this->descent_description,
             'required_gear' => $this->required_gear,
             'created_by_user_id' => auth()->id(),
-            // Auto-approve routes created during ascent logging
-            'is_approved' => true,
-            'approved_by_user_id' => auth()->id(),
-            'approved_at' => now(),
         ];
 
         // Handle topo file upload
@@ -177,7 +173,7 @@ class InlineRouteCreation extends Component
         // Close modal and reset form
         $this->closeModal();
 
-        session()->flash('success', 'Route created successfully and auto-approved!');
+        session()->flash('success', 'Route created successfully!');
     }
 
     public function render()

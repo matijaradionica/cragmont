@@ -30,8 +30,6 @@ class Route extends Model
     ];
 
     protected $casts = [
-        'is_approved' => 'boolean',
-        'approved_at' => 'datetime',
         'length_m' => 'integer',
         'pitch_count' => 'integer',
         'topo_data' => 'array',
@@ -69,14 +67,6 @@ class Route extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
-    }
-
-    /**
-     * Get the user who approved the route.
-     */
-    public function approver(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'approved_by_user_id');
     }
 
     /**
@@ -139,22 +129,6 @@ class Route extends Model
     }
 
     /**
-     * Scope to get only approved routes.
-     */
-    public function scopeApproved($query)
-    {
-        return $query->where('is_approved', true);
-    }
-
-    /**
-     * Scope to get only pending routes.
-     */
-    public function scopePending($query)
-    {
-        return $query->where('is_approved', false);
-    }
-
-    /**
      * Scope to filter by grade range.
      */
     public function scopeByGrade($query, $minGrade = null, $maxGrade = null)
@@ -207,25 +181,6 @@ class Route extends Model
     }
 
     /**
-     * Approve the route.
-     */
-    public function approve(User $approver): void
-    {
-        $this->is_approved = true;
-        $this->approved_by_user_id = $approver->id;
-        $this->approved_at = now();
-        $this->save();
-    }
-
-    /**
-     * Check if the route requires approval.
-     */
-    public function requiresApproval(): bool
-    {
-        return !$this->is_approved;
-    }
-
-    /**
      * Get formatted grade display.
      */
     public function getGradeDisplay(): string
@@ -249,13 +204,5 @@ class Route extends Model
         return $user->isAdmin()
             || $user->isModerator()
             || $this->created_by_user_id === $user->id;
-    }
-
-    /**
-     * Check if the route can be approved by a user.
-     */
-    public function canBeApprovedBy(User $user): bool
-    {
-        return $user->isAdmin() || $user->isModerator();
     }
 }

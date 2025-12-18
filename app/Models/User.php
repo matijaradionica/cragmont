@@ -147,14 +147,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if the user can auto-approve routes.
-     */
-    public function canAutoApproveRoutes(): bool
-    {
-        return $this->isAdmin() || $this->isClubEquipper();
-    }
-
-    /**
      * Check if the user has a specific role.
      */
     public function hasRole(string $roleName): bool

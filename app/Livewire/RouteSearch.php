@@ -19,7 +19,15 @@ class RouteSearch extends Component
     public $minGrade = '';
     public $maxGrade = '';
     public $statuses = [];
-    public $showPendingOnly = false;
+
+    /**
+     * Mount the component and ensure fresh data.
+     */
+    public function mount()
+    {
+        // Clear any Livewire cache to ensure fresh data
+        $this->resetPage();
+    }
 
     // Query string parameters for shareable URLs
     protected $queryString = [
@@ -30,7 +38,6 @@ class RouteSearch extends Component
         'minGrade' => ['except' => ''],
         'maxGrade' => ['except' => ''],
         'statuses' => ['except' => []],
-        'showPendingOnly' => ['except' => false],
     ];
 
     /**
@@ -69,7 +76,6 @@ class RouteSearch extends Component
             'minGrade',
             'maxGrade',
             'statuses',
-            'showPendingOnly',
         ]);
         $this->resetPage();
     }
@@ -80,14 +86,6 @@ class RouteSearch extends Component
     public function render()
     {
         $query = Route::query()->with(['location', 'creator']);
-
-        // Show approved routes by default unless user is admin/moderator
-        $user = auth()->user();
-        if ($this->showPendingOnly && ($user && ($user->isAdmin() || $user->isModerator()))) {
-            $query->pending();
-        } elseif (!$user || (!$user->isAdmin() && !$user->isModerator())) {
-            $query->approved();
-        }
 
         // Apply search
         if ($this->search) {
@@ -122,8 +120,8 @@ class RouteSearch extends Component
             $query->whereIn('status', $this->statuses);
         }
 
-        // Order by name
-        $query->orderBy('name');
+        // Order by creation date (newest first) by default, then by name
+        $query->orderBy('created_at', 'desc')->orderBy('name');
 
         // Get paginated results
         $routes = $query->paginate(15);

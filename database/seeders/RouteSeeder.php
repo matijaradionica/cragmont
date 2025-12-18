@@ -50,17 +50,10 @@ class RouteSeeder extends Seeder
             for ($i = 0; $i < $numRoutes; $i++) {
                 $creator = $users->random();
 
-                // Determine approval status based on user role
-                $isApproved = $creator->canAutoApproveRoutes() || rand(1, 100) <= 75;
-
                 $route = Route::factory()
                     ->for($location)
                     ->for($creator, 'creator')
-                    ->create([
-                        'is_approved' => $isApproved,
-                        'approved_at' => $isApproved ? fake()->dateTimeBetween('-6 months', 'now') : null,
-                        'approved_by_user_id' => $isApproved ? $users->where('role_id', 1)->first()?->id : null,
-                    ]);
+                    ->create();
 
                 $routeCount++;
             }
@@ -71,12 +64,7 @@ class RouteSeeder extends Seeder
         // Create some specific high-quality example routes
         $this->createExampleRoutes($locations, $users);
 
-        $approvedCount = Route::where('is_approved', true)->count();
-        $pendingCount = Route::where('is_approved', false)->count();
-
         $this->command->info("Total routes: " . Route::count());
-        $this->command->info("Approved: {$approvedCount}");
-        $this->command->info("Pending: {$pendingCount}");
     }
 
     /**
@@ -101,7 +89,6 @@ class RouteSeeder extends Seeder
         Route::factory()
             ->for($sectors->random())
             ->for($admin, 'creator')
-            ->approved()
             ->create([
                 'name' => 'Beginner\'s Luck',
                 'grade_type' => 'UIAA',
@@ -120,7 +107,6 @@ class RouteSeeder extends Seeder
         Route::factory()
             ->for($sectors->random())
             ->for($admin, 'creator')
-            ->approved()
             ->sport()
             ->create([
                 'name' => 'Crimson Wave',
@@ -139,7 +125,6 @@ class RouteSeeder extends Seeder
         Route::factory()
             ->for($sectors->random())
             ->for($admin, 'creator')
-            ->approved()
             ->traditional()
             ->create([
                 'name' => 'North Ridge Direct',
@@ -154,12 +139,11 @@ class RouteSeeder extends Seeder
                 'required_gear' => 'Double rack cams 0.3-3, full set of nuts, 15 slings, 2x60m ropes',
             ]);
 
-        // Create pending route (for testing moderation)
+        // Create example route from standard user
         if ($standardUser) {
             Route::factory()
                 ->for($sectors->random())
                 ->for($standardUser, 'creator')
-                ->pending()
                 ->create([
                     'name' => 'Unnamed Project',
                     'grade_type' => 'French',

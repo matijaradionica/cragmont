@@ -84,7 +84,6 @@ Route::middleware('auth')->group(function () {
 // Admin routes - only accessible by admins
 Route::middleware(['auth', 'can:viewAdmin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::post('routes/bulk-approve', [DashboardController::class, 'bulkApprove'])->name('routes.bulk-approve');
 
     // User role management
     Route::get('users', [UserRoleController::class, 'index'])->name('users.index');

@@ -64,17 +64,6 @@
                         placeholder="e.g., 7- or 7b">
                 </div>
             @endif
-
-            <!-- Admin: Show Pending Only -->
-            @can('moderate')
-                <div class="flex items-end">
-                    <label class="flex items-center">
-                        <input type="checkbox" wire:model.live="showPendingOnly"
-                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <span class="ml-2 text-sm text-gray-700">Pending Only</span>
-                    </label>
-                </div>
-            @endcan
         </div>
 
         <!-- Reset Filters Button -->
@@ -111,11 +100,6 @@
                                 onclick="window.location='{{ route('routes.show', $route) }}'">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-medium text-gray-900">{{ $route->name }}</div>
-                                    @if(!$route->is_approved)
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                                            Pending
-                                        </span>
-                                    @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {{ $route->location->name }}

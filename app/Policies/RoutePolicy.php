@@ -13,7 +13,7 @@ class RoutePolicy
      */
     public function viewAny(?User $user): bool
     {
-        // Anyone can view the routes list (pending routes are still restricted elsewhere)
+        // Anyone can view the routes list
         return true;
     }
 
@@ -22,19 +22,8 @@ class RoutePolicy
      */
     public function view(?User $user, Route $route): bool
     {
-        // Anyone can view approved routes
-        if ($route->is_approved) {
-            return true;
-        }
-
-        // For pending routes, only creator, admin, or moderator can view
-        if ($user) {
-            return $user->isAdmin()
-                || $user->isModerator()
-                || $route->created_by_user_id === $user->id;
-        }
-
-        return false;
+        // Anyone can view any route
+        return true;
     }
 
     /**
@@ -85,14 +74,5 @@ class RoutePolicy
     {
         // Only admin can permanently delete routes
         return $user->isAdmin();
-    }
-
-    /**
-     * Determine whether the user can approve the route.
-     */
-    public function approve(User $user, Route $route): bool
-    {
-        // Only admin and moderator can approve routes
-        return $user->isAdmin() || $user->isModerator();
     }
 }
