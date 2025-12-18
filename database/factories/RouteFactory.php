@@ -33,18 +33,18 @@ class RouteFactory extends Factory
             'Direct', 'Route', 'Line', 'Climb'
         ];
 
-        $gradeType = fake()->randomElement(['UIAA', 'French']);
+        $gradeType = $this->faker->randomElement(['UIAA', 'French']);
 
         $uiaaGrades = ['3', '4-', '4', '4+', '5-', '5', '5+', '6-', '6', '6+', '7-', '7', '7+', '8-', '8', '8+', '9-', '9', '9+', '10-', '10', '10+', '11-', '11'];
         $frenchGrades = ['3a', '3b', '3c', '4a', '4b', '4c', '5a', '5b', '5c', '6a', '6a+', '6b', '6b+', '6c', '6c+', '7a', '7a+', '7b', '7b+', '7c', '7c+', '8a', '8a+', '8b', '8b+', '8c', '8c+', '9a', '9a+'];
 
         $gradeValue = $gradeType === 'UIAA'
-            ? fake()->randomElement($uiaaGrades)
-            : fake()->randomElement($frenchGrades);
+            ? $this->faker->randomElement($uiaaGrades)
+            : $this->faker->randomElement($frenchGrades);
 
-        $routeType = fake()->randomElement(['Alpine', 'Sport', 'Traditional']);
-        $status = fake()->randomElement(['New', 'Equipped', 'Needs Repair', 'Closed']);
-        $riskRating = fake()->randomElement(['None', 'R', 'X']);
+        $routeType = $this->faker->randomElement(['Alpine', 'Sport', 'Traditional']);
+        $status = $this->faker->randomElement(['New', 'Equipped', 'Needs Repair', 'Closed']);
+        $riskRating = $this->faker->randomElement(['None', 'R', 'X']);
 
         // Approach descriptions
         $approaches = [
@@ -103,17 +103,17 @@ class RouteFactory extends Factory
         ];
 
         return [
-            'name' => fake()->randomElement($prefixes) . ' ' . fake()->randomElement($suffixes),
+            'name' => $this->faker->randomElement($prefixes) . ' ' . $this->faker->randomElement($suffixes),
             'location_id' => Location::inRandomOrder()->first()?->id ?? Location::factory(),
             'created_by_user_id' => User::inRandomOrder()->first()?->id ?? User::factory(),
-            'length_m' => fake()->numberBetween(8, 400),
-            'pitch_count' => fake()->numberBetween(1, 15),
+            'length_m' => $this->faker->numberBetween(8, 400),
+            'pitch_count' => $this->faker->numberBetween(1, 15),
             'grade_type' => $gradeType,
             'grade_value' => $gradeValue,
             'risk_rating' => $riskRating,
-            'approach_description' => fake()->randomElement($approaches),
-            'descent_description' => fake()->randomElement($descents),
-            'required_gear' => fake()->randomElement($gearByType[$routeType]),
+            'approach_description' => $this->faker->randomElement($approaches),
+            'descent_description' => $this->faker->randomElement($descents),
+            'required_gear' => $this->faker->randomElement($gearByType[$routeType]),
             'route_type' => $routeType,
             'status' => $status,
         ];
@@ -126,7 +126,7 @@ class RouteFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'route_type' => 'Sport',
-            'required_gear' => fake()->randomElement([
+            'required_gear' => $this->faker->randomElement([
                 '12-14 quickdraws, 60m rope',
                 '10 quickdraws for protection',
                 '8-10 quickdraws, 70m rope recommended',
@@ -141,7 +141,7 @@ class RouteFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'route_type' => 'Traditional',
-            'required_gear' => fake()->randomElement([
+            'required_gear' => $this->faker->randomElement([
                 'Standard trad rack: cams 0.3-3, set of nuts',
                 'Double rack of cams from 0.5-4, full set of nuts',
                 'Small to medium cams (0.3-2), nuts, tricams',
@@ -156,7 +156,7 @@ class RouteFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'route_type' => 'Alpine',
-            'required_gear' => fake()->randomElement([
+            'required_gear' => $this->faker->randomElement([
                 'Light alpine rack, 60m rope, helmet essential',
                 'Standard rack, extra slings for long pitches',
                 'Minimal rack: cams to #2, few slings, 50m rope',

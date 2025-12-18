@@ -39,7 +39,7 @@ class LocationFactory extends Factory
             'Roof Sector', 'Hanging Garden', 'Amphitheater', 'Alcove', 'Gallery'
         ];
 
-        $level = fake()->numberBetween(0, 2);
+        $level = $this->faker->numberBetween(0, 2);
 
         $names = [
             0 => $mountains,
@@ -74,11 +74,11 @@ class LocationFactory extends Factory
         ];
 
         return [
-            'name' => fake()->randomElement($names[$level]),
+            'name' => $this->faker->randomElement($names[$level]),
             'level' => $level,
-            'gps_lat' => $level === 0 ? fake()->latitude(25, 50) : null,
-            'gps_lng' => $level === 0 ? fake()->longitude(-125, -70) : null,
-            'description' => fake()->randomElement($descriptions[$level]),
+            'gps_lat' => $level === 0 ? $this->faker->latitude(25, 50) : null,
+            'gps_lng' => $level === 0 ? $this->faker->longitude(-125, -70) : null,
+            'description' => $this->faker->randomElement($descriptions[$level]),
             'parent_id' => null, // Will be set by seeder
         ];
     }
@@ -90,8 +90,8 @@ class LocationFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'level' => 0,
-            'gps_lat' => fake()->latitude(25, 50),
-            'gps_lng' => fake()->longitude(-125, -70),
+            'gps_lat' => $this->faker->latitude(25, 50),
+            'gps_lng' => $this->faker->longitude(-125, -70),
             'parent_id' => null,
         ]);
     }
