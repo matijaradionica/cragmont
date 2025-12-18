@@ -653,7 +653,13 @@ async function initTopoViewers() {
     const fabric = await loadFabric();
 
     viewerRoots.forEach((root) => {
-        if (root.dataset.topoInitialized === 'true') return;
+        if (root.dataset.topoInitialized === 'true' || root.dataset.topoInitialized === 'initializing') {
+            // Already initialized or currently initializing, skip
+            return;
+        }
+
+        // Mark as initializing to prevent race conditions
+        root.dataset.topoInitialized = 'initializing';
 
         const canvasElement = root.querySelector('canvas[data-topo-canvas]');
         const topoUrl = root.getAttribute('data-topo-url') || null;
@@ -722,15 +728,18 @@ async function initTopoViewers() {
 
             const scaleInfoMarkersForMobile = () => {
                 if (!isMobile()) return;
-                const mobileScale = 2;
+                const targetScale = 2;
 
                 viewerCanvas.getObjects().forEach((obj) => {
                     if (obj.dataType === 'info-marker') {
-                        const currentScale = obj.scaleX || 1;
+                        // Check if already scaled to avoid re-scaling
+                        if (obj.__mobileScaled) return;
+
                         obj.set({
-                            scaleX: currentScale * mobileScale,
-                            scaleY: currentScale * mobileScale,
+                            scaleX: targetScale,
+                            scaleY: targetScale,
                         });
+                        obj.__mobileScaled = true;
                     }
                 });
             };
@@ -955,6 +964,7 @@ async function initTopoViewers() {
                 const nextZoom = clampZoom(zoom * Math.pow(0.999, delta));
                 const point = getCanvasPointFromClient(e.clientX, e.clientY);
                 viewerCanvas.zoomToPoint(point, nextZoom);
+                viewerCanvas.calcOffset();
                 viewerCanvas.requestRenderAll();
                 if (interaction.pinnedMarker) showTooltipForMarker(interaction.pinnedMarker);
             });
@@ -966,6 +976,7 @@ async function initTopoViewers() {
                 if (!enablePanAndZoom) return;
                 activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
                 if (activePointers.size === 2) {
+                    e.preventDefault();  // Prevent browser zoom when 2 fingers detected
                     const points = Array.from(activePointers.values());
                     pinchState.active = true;
                     pinchState.startZoom = viewerCanvas.getZoom();
@@ -988,6 +999,7 @@ async function initTopoViewers() {
                 const centerY = (points[0].y + points[1].y) / 2;
                 const point = getCanvasPointFromClient(centerX, centerY);
                 viewerCanvas.zoomToPoint(point, nextZoom);
+                viewerCanvas.calcOffset();
                 viewerCanvas.requestRenderAll();
                 if (interaction.pinnedMarker) showTooltipForMarker(interaction.pinnedMarker);
             };
@@ -996,7 +1008,7 @@ async function initTopoViewers() {
                 if (activePointers.size < 2) pinchState.active = false;
             };
 
-            viewerCanvas.upperCanvasEl.addEventListener('pointerdown', onPointerDown);
+            viewerCanvas.upperCanvasEl.addEventListener('pointerdown', onPointerDown, { passive: false });
             viewerCanvas.upperCanvasEl.addEventListener('pointermove', onPointerMove, { passive: false });
             viewerCanvas.upperCanvasEl.addEventListener('pointerup', onPointerUp);
             viewerCanvas.upperCanvasEl.addEventListener('pointercancel', onPointerUp);
@@ -1005,6 +1017,7 @@ async function initTopoViewers() {
                 if (!enablePanAndZoom) return;
                 viewerCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
                 viewerCanvas.setZoom(1);
+                viewerCanvas.calcOffset();
                 viewerCanvas.requestRenderAll();
                 if (interaction.pinnedMarker) showTooltipForMarker(interaction.pinnedMarker);
             });
@@ -1012,7 +1025,7 @@ async function initTopoViewers() {
             return { viewerCanvas, setCanvasCssSize, applyReadOnly };
         };
 
-        const smallViewer = createViewer(root, canvasElement, tooltip);
+        const smallViewer = createViewer(root, canvasElement, tooltip, { enablePanAndZoom: false });
         let largeViewer = null;
 
         const load = async () => {
@@ -1049,10 +1062,22 @@ async function initTopoViewers() {
             smallViewer.setCanvasCssSize();
 
             if (topoData?.fabric?.objects) {
-                await smallViewer.viewerCanvas.loadFromJSON(topoData.fabric);
-                setBackgroundImageCompat(smallViewer.viewerCanvas, img);
-                smallViewer.applyReadOnly();
-                smallViewer.viewerCanvas.requestRenderAll();
+                try {
+                    await smallViewer.viewerCanvas.loadFromJSON(topoData.fabric);
+                    setBackgroundImageCompat(smallViewer.viewerCanvas, img);
+                    smallViewer.applyReadOnly();
+                    smallViewer.viewerCanvas.requestRenderAll();
+
+                    // Validate objects loaded correctly
+                    const objectCount = smallViewer.viewerCanvas.getObjects().length;
+                    if (objectCount === 0 && topoData.fabric.objects.length > 0) {
+                        console.warn('Canvas loaded 0 objects but JSON had objects:', topoData.fabric.objects.length);
+                    }
+                } catch (err) {
+                    console.error('Failed to load topo data for small viewer:', err);
+                    // Fallback: at least show the image even if objects fail to load
+                    smallViewer.applyReadOnly();
+                }
             } else {
                 smallViewer.applyReadOnly();
             }
@@ -1066,7 +1091,7 @@ async function initTopoViewers() {
 
             if (!largeViewer) {
                 const lightboxContainer = root.querySelector('[data-topo-lightbox-wrap]') ?? lightboxCanvasElement.parentElement ?? lightbox;
-                largeViewer = createViewer(lightboxContainer, lightboxCanvasElement, lightboxTooltip, { enablePanAndZoom: false });
+                largeViewer = createViewer(lightboxContainer, lightboxCanvasElement, lightboxTooltip, { enablePanAndZoom: true });
 
                 const img = await fabric.FabricImage.fromURL(topoUrl, { crossOrigin: 'anonymous' });
                 const naturalWidth = img.width ?? 0;
@@ -1101,17 +1126,33 @@ async function initTopoViewers() {
                 largeViewer.setCanvasCssSize();
 
                 if (topoData?.fabric?.objects) {
-                    await largeViewer.viewerCanvas.loadFromJSON(topoData.fabric);
-                    setBackgroundImageCompat(largeViewer.viewerCanvas, img);
-                    largeViewer.applyReadOnly();
-                    largeViewer.viewerCanvas.requestRenderAll();
+                    try {
+                        await largeViewer.viewerCanvas.loadFromJSON(topoData.fabric);
+                        setBackgroundImageCompat(largeViewer.viewerCanvas, img);
+                        largeViewer.applyReadOnly();
+                        largeViewer.viewerCanvas.requestRenderAll();
+
+                        // Validate objects loaded correctly
+                        const objectCount = largeViewer.viewerCanvas.getObjects().length;
+                        if (objectCount === 0 && topoData.fabric.objects.length > 0) {
+                            console.warn('Canvas loaded 0 objects but JSON had objects:', topoData.fabric.objects.length);
+                        }
+                    } catch (err) {
+                        console.error('Failed to load topo data for lightbox viewer:', err);
+                        // Fallback: at least show the image even if objects fail to load
+                        largeViewer.applyReadOnly();
+                    }
                 } else {
                     largeViewer.applyReadOnly();
                 }
 
                 window.addEventListener('resize', () => largeViewer?.setCanvasCssSize());
             } else {
+                // Reset viewport transform and zoom when reopening lightbox
+                largeViewer.viewerCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+                largeViewer.viewerCanvas.setZoom(1);
                 largeViewer.setCanvasCssSize();
+                largeViewer.viewerCanvas.requestRenderAll();
             }
         };
 
@@ -1130,7 +1171,16 @@ async function initTopoViewers() {
             if (e.key === 'Escape') closeLightbox();
         });
 
-        load().catch((err) => console.error('Topo viewer load failed', err));
+        load()
+            .then(() => {
+                // Mark as fully initialized after successful load
+                root.dataset.topoInitialized = 'true';
+            })
+            .catch((err) => {
+                console.error('Topo viewer load failed', err);
+                // Reset initialization flag on error to allow retry
+                root.dataset.topoInitialized = 'false';
+            });
     });
 }
 

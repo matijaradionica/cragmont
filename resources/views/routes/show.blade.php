@@ -187,8 +187,12 @@
                                     <script type="application/json" data-topo-data>{!! json_encode($route->topo_data) !!}</script>
                                     <canvas data-topo-canvas></canvas>
                                     <button type="button" data-topo-lightbox-open
-                                        class="absolute inset-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        aria-label="Open topo in full screen"></button>
+                                        class="absolute bottom-2 right-2 bg-white/90 hover:bg-white rounded-lg shadow-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition z-10"
+                                        aria-label="Open topo in full screen">
+                                        <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                                        </svg>
+                                    </button>
                                     <div data-topo-tooltip class="pointer-events-none hidden absolute z-10 max-w-xs rounded-md bg-gray-900 text-white text-xs px-2 py-1 shadow-lg"></div>
 
                                     <div data-topo-lightbox class="fixed inset-0 z-50 hidden">

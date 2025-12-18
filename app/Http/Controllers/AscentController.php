@@ -119,8 +119,7 @@ class AscentController extends Controller
         $routeId = $request->query('route_id');
         $route = $routeId ? Route::findOrFail($routeId) : null;
 
-        $routes = Route::approved()
-            ->with('location')
+        $routes = Route::with('location')
             ->orderBy('name')
             ->get();
 
@@ -191,8 +190,7 @@ class AscentController extends Controller
     {
         Gate::authorize('update', $ascent);
 
-        $routes = Route::approved()
-            ->with('location')
+        $routes = Route::with('location')
             ->orderBy('name')
             ->get();
 
