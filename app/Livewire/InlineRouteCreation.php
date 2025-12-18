@@ -141,6 +141,12 @@ class InlineRouteCreation extends Component
         if ($this->topo) {
             $path = $this->topo->store('topos', 'public');
             $routeData['topo_url'] = $path;
+
+            // Handle topo_data if provided
+            if ($this->topo_data && $this->topo_data !== 'null') {
+                $decoded = json_decode($this->topo_data, true);
+                $routeData['topo_data'] = is_array($decoded) ? $decoded : null;
+            }
         }
 
         $route = Route::create($routeData);

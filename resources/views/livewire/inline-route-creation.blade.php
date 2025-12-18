@@ -227,23 +227,152 @@
                                 @enderror
                             </div>
 
-                            <!-- Topo Upload -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    Topo Diagram (Optional)
-                                </label>
-                                <input type="file" wire:model="topo" accept="image/*"
-                                    class="block w-full text-sm text-gray-500
-                                        file:mr-4 file:py-2 file:px-4
-                                        file:rounded-md file:border-0
-                                        file:text-sm file:font-semibold
-                                        file:bg-indigo-50 file:text-indigo-700
-                                        hover:file:bg-indigo-100">
-                                @error('topo')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                                <div wire:loading wire:target="topo" class="mt-1 text-sm text-indigo-600">
-                                    Uploading...
+                            <!-- Topo Editor -->
+                            <div wire:ignore>
+                                <div class="space-y-3" data-topo-editor data-topo-url="">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        Topo Image (Optional)
+                                    </label>
+
+                                    <p class="text-sm text-gray-500">
+                                        Upload an image, then draw the route line on top. Undo/redo is available. Replacing the image clears the drawing.
+                                    </p>
+
+                                    <input
+                                        type="file"
+                                        name="topo_file"
+                                        id="inline_topo_file"
+                                        data-topo-file
+                                        accept="image/*"
+                                        class="block w-full text-sm text-gray-500
+                                            file:mr-4 file:py-2 file:px-4
+                                            file:rounded-md file:border-0
+                                            file:text-sm file:font-semibold
+                                            file:bg-indigo-50 file:text-indigo-700
+                                            hover:file:bg-indigo-100"
+                                    >
+
+                                    <textarea name="topo_data" id="inline_topo_data" data-topo-data class="hidden">null</textarea>
+
+                                    <div class="rounded-lg border border-gray-300 bg-white p-3">
+                                        <div class="flex flex-wrap items-center gap-2 mb-3">
+                                            <button type="button" data-topo-tool="draw"
+                                                class="inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white rounded-md text-xs uppercase tracking-widest hover:bg-indigo-700">
+                                                Draw
+                                            </button>
+                                            <button type="button" data-topo-tool="info"
+                                                class="inline-flex items-center px-3 py-1.5 bg-gray-200 text-gray-800 rounded-md text-xs uppercase tracking-widest hover:bg-gray-300">
+                                                Info Marker
+                                            </button>
+
+                                            <button type="button" data-topo-undo
+                                                class="inline-flex items-center px-3 py-1.5 bg-gray-800 text-white rounded-md text-xs uppercase tracking-widest hover:bg-gray-700">
+                                                Undo
+                                            </button>
+                                            <button type="button" data-topo-redo
+                                                class="inline-flex items-center px-3 py-1.5 bg-gray-800 text-white rounded-md text-xs uppercase tracking-widest hover:bg-gray-700">
+                                                Redo
+                                            </button>
+                                            <button type="button" data-topo-clear
+                                                class="inline-flex items-center px-3 py-1.5 bg-gray-200 text-gray-800 rounded-md text-xs uppercase tracking-widest hover:bg-gray-300">
+                                                Clear
+                                            </button>
+
+                                            <div class="ml-auto flex items-center gap-2">
+                                                <label class="text-xs text-gray-600">Color</label>
+                                                <input type="color" data-topo-color value="#ef4444" class="h-8 w-10 rounded border border-gray-300">
+                                                <label class="text-xs text-gray-600">Width</label>
+                                                <input type="range" data-topo-width min="2" max="16" value="6" class="w-28">
+                                            </div>
+                                        </div>
+
+                                        <div data-topo-wrap class="w-full">
+                                            <canvas data-topo-canvas></canvas>
+                                        </div>
+
+                                        <p class="mt-2 text-xs text-gray-500">
+                                            Tip: use a trackpad/mouse for cleaner lines.
+                                        </p>
+                                    </div>
+
+                                    <!-- Info Marker Modal -->
+                                    <div data-topo-marker-modal class="fixed inset-0 z-50 hidden">
+                                        <div class="absolute inset-0 bg-black/40" data-topo-marker-cancel></div>
+                                        <div class="absolute inset-0 flex items-center justify-center p-4">
+                                            <div class="w-full max-w-md rounded-lg bg-white shadow-lg border border-gray-200 p-4">
+                                                <div class="flex items-center justify-between mb-3">
+                                                    <h3 class="text-sm font-semibold text-gray-900">Info Marker</h3>
+                                                    <button type="button" class="text-gray-500 hover:text-gray-700" data-topo-marker-cancel>
+                                                        ✕
+                                                    </button>
+                                                </div>
+
+                                                <div class="space-y-3">
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-gray-700 mb-1">Title</label>
+                                                        <input type="text" data-topo-marker-title
+                                                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                            placeholder="e.g., Crux Move">
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                                                        <textarea rows="4" data-topo-marker-description
+                                                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                            placeholder="Add beta, safety notes, gear, etc."></textarea>
+                                                    </div>
+
+                                                    <div class="flex justify-end gap-2 pt-2">
+                                                        <button type="button" data-topo-marker-cancel
+                                                            class="inline-flex items-center px-3 py-1.5 bg-gray-200 text-gray-800 rounded-md text-xs uppercase tracking-widest hover:bg-gray-300">
+                                                            Cancel
+                                                        </button>
+                                                        <button type="button" data-topo-marker-save
+                                                            class="inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white rounded-md text-xs uppercase tracking-widest hover:bg-indigo-700">
+                                                            Save
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Crop Modal -->
+                                    <div data-topo-crop-modal class="fixed inset-0 z-50 hidden">
+                                        <div class="absolute inset-0 bg-black/60" data-topo-crop-cancel></div>
+                                        <div class="absolute inset-0 z-10 flex items-center justify-center p-4">
+                                            <div class="relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-lg bg-white shadow-lg border border-gray-200 p-3">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <div class="text-sm font-semibold text-gray-900">Crop Topo Image</div>
+                                                    <button type="button" data-topo-crop-cancel
+                                                        class="text-gray-500 hover:text-gray-700 px-2 py-1"
+                                                        aria-label="Cancel">✕</button>
+                                                </div>
+
+                                                <div class="relative w-full max-h-[75vh] overflow-hidden bg-gray-50 rounded border border-gray-200">
+                                                    <img data-topo-crop-image alt="Crop topo" class="max-w-full">
+                                                </div>
+
+                                                <div class="mt-3 flex items-center justify-end gap-2">
+                                                    <button type="button" data-topo-crop-cancel
+                                                        class="inline-flex items-center px-3 py-1.5 bg-gray-200 text-gray-800 rounded-md text-xs uppercase tracking-widest hover:bg-gray-300">
+                                                        Cancel
+                                                    </button>
+                                                    <button type="button" data-topo-crop-apply
+                                                        class="inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white rounded-md text-xs uppercase tracking-widest hover:bg-indigo-700">
+                                                        Use Cropped Image
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    @error('topo')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                    @error('topo_data')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
                                 </div>
                             </div>
 
@@ -296,4 +425,95 @@
         </div>
     </div>
     @endif
+
+    @push('styles')
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+    @endpush
+
+    @push('scripts')
+    <script>
+        // Re-initialize topo editor when modal is shown
+        document.addEventListener('livewire:initialized', function() {
+            Livewire.hook('morph.updated', ({ el, component }) => {
+                // Check if this is our inline route creation component
+                if (el.querySelector('[data-topo-editor]') && window.__cragmontInitTopo) {
+                    // Small delay to ensure DOM is ready
+                    setTimeout(() => {
+                        window.__cragmontInitTopo();
+
+                        // Set up file sync after topo editor is initialized
+                        setupTopoFileSync();
+                    }, 100);
+                }
+            });
+        });
+
+        function setupTopoFileSync() {
+            const topoFileInput = document.getElementById('inline_topo_file');
+            const topoDataField = document.getElementById('inline_topo_data');
+
+            if (!topoFileInput || !topoDataField) return;
+
+            // Helper to find the Livewire component
+            function findLivewireComponent() {
+                const form = topoFileInput.closest('form');
+                if (!form) return null;
+
+                const livewireEl = form.closest('[wire\\:id]');
+                if (!livewireEl) return null;
+
+                const wireId = livewireEl.getAttribute('wire:id');
+                return wireId ? Livewire.find(wireId) : null;
+            }
+
+            // Listen for file changes from the topo editor
+            topoFileInput.addEventListener('change', function(e) {
+                const files = e.target.files;
+                if (files && files.length > 0) {
+                    const component = findLivewireComponent();
+
+                    if (component) {
+                        // Upload file to Livewire
+                        component.upload('topo', files[0],
+                            (uploadedFilename) => {
+                                // File uploaded successfully
+                                console.log('Topo file uploaded to Livewire');
+                            },
+                            () => {
+                                // Upload progress
+                            },
+                            (event) => {
+                                // Upload error
+                                console.error('Topo file upload error:', event);
+                            }
+                        );
+                    }
+                }
+            });
+
+            // Sync topo_data before form submission
+            const form = topoFileInput.closest('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    const component = findLivewireComponent();
+
+                    if (component && topoDataField.value && topoDataField.value !== 'null') {
+                        // Sync topo_data to Livewire component
+                        component.set('topo_data', topoDataField.value);
+                    }
+                }, true); // Use capture phase to run before Livewire's handler
+            }
+        }
+
+        // Initial setup when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                if (window.__cragmontInitTopo) {
+                    window.__cragmontInitTopo();
+                }
+                setupTopoFileSync();
+            }, 100);
+        });
+    </script>
+    @endpush
 </div>

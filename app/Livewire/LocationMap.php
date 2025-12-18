@@ -34,16 +34,12 @@ class LocationMap extends Component
     public function getLocationsProperty()
     {
         if ($this->showSingleLocation && $this->locationId) {
-            $location = Location::with(['routes' => function($query) {
-                $query->where('is_approved', true);
-            }])->find($this->locationId);
+            $location = Location::with('routes')->find($this->locationId);
 
             return $location ? collect([$location]) : collect([]);
         }
 
-        return Location::with(['routes' => function($query) {
-            $query->where('is_approved', true);
-        }])
+        return Location::with('routes')
             ->whereNotNull('gps_lat')
             ->whereNotNull('gps_lng')
             ->get();

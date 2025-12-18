@@ -56,10 +56,7 @@ new class extends Component
                         $pendingReportsCount = auth()->user()->isAdmin() || auth()->user()->isModerator()
                             ? \App\Models\CommentReport::where('status', 'pending')->count()
                             : 0;
-                        $pendingRoutesCount = auth()->user()->isAdmin() || auth()->user()->isModerator()
-                            ? \App\Models\Route::where('is_approved', false)->count()
-                            : 0;
-                        $totalNotifications = $unreadWarningsCount + $pendingReportsCount + $pendingRoutesCount;
+                        $totalNotifications = $unreadWarningsCount + $pendingReportsCount;
                     @endphp
 
                     <div class="relative" x-data="{ open: false }">
@@ -124,29 +121,6 @@ new class extends Component
                                         </div>
                                         <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                             {{ $pendingReportsCount }}
-                                        </span>
-                                    </div>
-                                </a>
-                            @endif
-
-                            @if($pendingRoutesCount > 0)
-                                <a href="{{ route('admin.dashboard') }}" class="block px-4 py-3 hover:bg-gray-50 transition">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center space-x-3">
-                                            <div class="flex-shrink-0">
-                                                <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-yellow-100">
-                                                    <svg class="h-5 w-5 text-yellow-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5l2 2h5a2 2 0 012 2v12a2 2 0 01-2 2z"></path>
-                                                    </svg>
-                                                </span>
-                                            </div>
-                                            <div class="flex-1">
-                                                <p class="text-sm font-medium text-gray-900">Pending Routes</p>
-                                                <p class="text-xs text-gray-500">{{ $pendingRoutesCount }} route(s) awaiting approval</p>
-                                            </div>
-                                        </div>
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                            {{ $pendingRoutesCount }}
                                         </span>
                                     </div>
                                 </a>
@@ -254,10 +228,7 @@ new class extends Component
                         $mobilePendingReports = auth()->user()->isAdmin() || auth()->user()->isModerator()
                             ? \App\Models\CommentReport::where('status', 'pending')->count()
                             : 0;
-                        $mobilePendingRoutes = auth()->user()->isAdmin() || auth()->user()->isModerator()
-                            ? \App\Models\Route::where('is_approved', false)->count()
-                            : 0;
-                        $mobileTotalNotifications = $mobileUnreadWarnings + $mobilePendingReports + $mobilePendingRoutes;
+                        $mobileTotalNotifications = $mobileUnreadWarnings + $mobilePendingReports;
                     @endphp
 
                     @if($mobileUnreadWarnings > 0)
@@ -274,14 +245,6 @@ new class extends Component
                             {{ __('Pending Reports') }}
                             <span class="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
                                 {{ $mobilePendingReports }}
-                            </span>
-                        </x-responsive-nav-link>
-                    @endif
-                    @if($mobilePendingRoutes > 0)
-                        <x-responsive-nav-link :href="route('admin.dashboard')" wire:navigate>
-                            {{ __('Pending Routes') }}
-                            <span class="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-yellow-600 rounded-full">
-                                {{ $mobilePendingRoutes }}
                             </span>
                         </x-responsive-nav-link>
                     @endif

@@ -54,15 +54,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('users/{user}/avatar', [UserAvatarController::class, 'show'])
         ->name('users.avatar');
-
-    // Additional route management actions
-    Route::post('routes/{route}/approve', [RouteController::class, 'approve'])
-        ->name('routes.approve')
-        ->middleware('can:approve,route');
-
-    Route::post('routes/{route}/reject', [RouteController::class, 'reject'])
-        ->name('routes.reject')
-        ->middleware('can:approve,route');
 });
 
 // Routes detail is public; defined after the management routes so `/routes/create` is not captured.

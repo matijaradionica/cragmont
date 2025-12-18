@@ -61,10 +61,6 @@ class LocationController extends Controller
 
         // Load relationships
         $location->load(['parent', 'children', 'routes' => function ($query) {
-            // Only show approved routes unless user is admin/moderator or creator
-            if (! auth()->user() || (! auth()->user()->isAdmin() && ! auth()->user()->isModerator())) {
-                $query->where('is_approved', true);
-            }
             $query->orderBy('name');
         }]);
 

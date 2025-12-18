@@ -65,8 +65,10 @@ class RouteController extends Controller
             $validated['topo_data'] = null;
         }
 
+        $user = auth()->user();
+
         // Set default values for optional fields when admin doesn't provide them
-        if (auth()->user()->isAdmin()) {
+        if ($user && $user->isAdmin()) {
             $validated['location_id'] = $validated['location_id'] ?? null;
             $validated['grade_type'] = $validated['grade_type'] ?? 'UIAA';
             $validated['grade_value'] = $validated['grade_value'] ?? 'N/A';
@@ -74,17 +76,12 @@ class RouteController extends Controller
             $validated['risk_rating'] = $validated['risk_rating'] ?? 'None';
             $validated['pitch_count'] = $validated['pitch_count'] ?? 1;
             $validated['status'] = $validated['status'] ?? 'New';
-
-            // Admins always get auto-approved routes
-            $validated['is_approved'] = true;
-            $validated['approved_by_user_id'] = auth()->id();
-            $validated['approved_at'] = now();
-        } elseif (auth()->user()->canAutoApproveRoutes()) {
-            // Auto-approve for Club/Equipper users
-            $validated['is_approved'] = true;
-            $validated['approved_by_user_id'] = auth()->id();
-            $validated['approved_at'] = now();
         }
+
+        // Auto-approve all routes (no approval needed)
+        $validated['is_approved'] = true;
+        $validated['approved_by_user_id'] = auth()->id();
+        $validated['approved_at'] = now();
 
         $route = Route::create($validated);
 
@@ -106,13 +103,9 @@ class RouteController extends Controller
             ]);
         }
 
-        $message = $route->is_approved
-            ? 'Route created and approved successfully!'
-            : 'Route submitted for approval.';
-
         // Disable Livewire navigation to force fresh data load
         return redirect()->route('routes.show', $route)
-            ->with('success', $message)
+            ->with('success', 'Route created successfully!')
             ->header('X-Livewire-Navigate', 'false');
     }
 
@@ -188,13 +181,6 @@ class RouteController extends Controller
             $validated['topo_data'] = null;
         }
 
-        // Trigger re-moderation if edited by non-admin/moderator
-        if (! auth()->user()->isAdmin() && ! auth()->user()->isModerator()) {
-            $validated['is_approved'] = false;
-            $validated['approved_by_user_id'] = null;
-            $validated['approved_at'] = null;
-        }
-
         $route->update($validated);
 
         $uploadedPhotos = $request->file('photos', []);
@@ -220,13 +206,9 @@ class RouteController extends Controller
             }
         }
 
-        $message = ! $route->is_approved
-            ? 'Changes saved. Route will need re-approval.'
-            : 'Route updated successfully!';
-
         // Disable Livewire navigation to force fresh data load
         return redirect()->route('routes.show', $route)
-            ->with('success', $message)
+            ->with('success', 'Route updated successfully!')
             ->header('X-Livewire-Navigate', 'false');
     }
 
@@ -245,29 +227,4 @@ class RouteController extends Controller
             ->header('X-Livewire-Navigate', 'false');
     }
 
-    /**
-     * Approve a pending route.
-     */
-    public function approve(Route $route)
-    {
-        $this->authorize('approve', $route);
-
-        $route->approve(auth()->user());
-
-        return back()->with('success', 'Route approved successfully!');
-    }
-
-    /**
-     * Reject a pending route.
-     */
-    public function reject(Route $route)
-    {
-        $this->authorize('approve', $route);
-
-        // For now, just delete the route
-        // In the future, you might want to add a rejection reason or soft delete
-        $route->delete();
-
-        return back()->with('success', 'Route rejected and removed.');
-    }
 }
