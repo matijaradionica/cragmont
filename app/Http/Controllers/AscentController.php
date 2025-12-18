@@ -23,7 +23,7 @@ class AscentController extends Controller
         $userId = $request->query('user_id', auth()->id());
 
         // Users can only view their own logbook unless they're admin
-        if ($userId != auth()->id() && !auth()->user()->isAdmin()) {
+        if ($userId != auth()->id() && ! auth()->user()->isAdmin()) {
             abort(403, 'Unauthorized to view this logbook.');
         }
 
@@ -132,25 +132,44 @@ class AscentController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'route_id' => 'required|exists:routes,id',
-            'ascent_date' => 'required|date|before_or_equal:today',
-            'partners' => 'nullable|string|max:255',
-            'status' => 'required|in:Success,Failed,Attempt',
-            'notes' => 'nullable|string|max:2000',
-        ]);
+        // Admins have relaxed validation - most fields are optional
+        if (auth()->user()->isAdmin()) {
+            $validated = $request->validate([
+                'route_id' => 'nullable|exists:routes,id',
+                'ascent_date' => 'nullable|date|before_or_equal:today',
+                'partners' => 'nullable|string|max:255',
+                'status' => 'nullable|in:Success,Failed,Attempt',
+                'notes' => 'nullable|string|max:2000',
+            ]);
+
+            // Set defaults for missing fields
+            $validated['route_id'] = $validated['route_id'] ?? null;
+            $validated['ascent_date'] = $validated['ascent_date'] ?? now()->toDateString();
+            $validated['status'] = $validated['status'] ?? 'Success';
+        } else {
+            // Standard validation for non-admin users
+            $validated = $request->validate([
+                'route_id' => 'required|exists:routes,id',
+                'ascent_date' => 'required|date|before_or_equal:today',
+                'partners' => 'nullable|string|max:255',
+                'status' => 'required|in:Success,Failed,Attempt',
+                'notes' => 'nullable|string|max:2000',
+            ]);
+        }
 
         $ascent = Ascent::create([
             'user_id' => auth()->id(),
             'route_id' => $validated['route_id'],
             'ascent_date' => $validated['ascent_date'],
-            'partners' => $validated['partners'],
+            'partners' => $validated['partners'] ?? null,
             'status' => $validated['status'],
-            'notes' => $validated['notes'],
+            'notes' => $validated['notes'] ?? null,
         ]);
 
+        // Disable Livewire navigation to force fresh data load
         return redirect()->route('ascents.show', $ascent)
-            ->with('success', 'Ascent logged successfully!');
+            ->with('success', 'Ascent logged successfully!')
+            ->header('X-Livewire-Navigate', 'false');
     }
 
     /**
@@ -187,18 +206,37 @@ class AscentController extends Controller
     {
         Gate::authorize('update', $ascent);
 
-        $validated = $request->validate([
-            'route_id' => 'required|exists:routes,id',
-            'ascent_date' => 'required|date|before_or_equal:today',
-            'partners' => 'nullable|string|max:255',
-            'status' => 'required|in:Success,Failed,Attempt',
-            'notes' => 'nullable|string|max:2000',
-        ]);
+        // Admins have relaxed validation - most fields are optional
+        if (auth()->user()->isAdmin()) {
+            $validated = $request->validate([
+                'route_id' => 'nullable|exists:routes,id',
+                'ascent_date' => 'nullable|date|before_or_equal:today',
+                'partners' => 'nullable|string|max:255',
+                'status' => 'nullable|in:Success,Failed,Attempt',
+                'notes' => 'nullable|string|max:2000',
+            ]);
+
+            // Set defaults for missing fields
+            $validated['route_id'] = $validated['route_id'] ?? $ascent->route_id;
+            $validated['ascent_date'] = $validated['ascent_date'] ?? $ascent->ascent_date;
+            $validated['status'] = $validated['status'] ?? $ascent->status;
+        } else {
+            // Standard validation for non-admin users
+            $validated = $request->validate([
+                'route_id' => 'required|exists:routes,id',
+                'ascent_date' => 'required|date|before_or_equal:today',
+                'partners' => 'nullable|string|max:255',
+                'status' => 'required|in:Success,Failed,Attempt',
+                'notes' => 'nullable|string|max:2000',
+            ]);
+        }
 
         $ascent->update($validated);
 
+        // Disable Livewire navigation to force fresh data load
         return redirect()->route('ascents.show', $ascent)
-            ->with('success', 'Ascent updated successfully!');
+            ->with('success', 'Ascent updated successfully!')
+            ->header('X-Livewire-Navigate', 'false');
     }
 
     /**
@@ -210,7 +248,9 @@ class AscentController extends Controller
 
         $ascent->delete();
 
+        // Disable Livewire navigation to force fresh data load
         return redirect()->route('ascents.index')
-            ->with('success', 'Ascent deleted successfully.');
+            ->with('success', 'Ascent deleted successfully.')
+            ->header('X-Livewire-Navigate', 'false');
     }
 }

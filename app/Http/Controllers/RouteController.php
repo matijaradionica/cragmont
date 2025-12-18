@@ -7,7 +7,6 @@ use App\Http\Requests\UpdateRouteRequest;
 use App\Models\Location;
 use App\Models\Photo;
 use App\Models\Route;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class RouteController extends Controller
@@ -66,8 +65,22 @@ class RouteController extends Controller
             $validated['topo_data'] = null;
         }
 
-        // Auto-approve for Admin and Club/Equipper users
-        if (auth()->user()->canAutoApproveRoutes()) {
+        // Set default values for optional fields when admin doesn't provide them
+        if (auth()->user()->isAdmin()) {
+            $validated['location_id'] = $validated['location_id'] ?? null;
+            $validated['grade_type'] = $validated['grade_type'] ?? 'UIAA';
+            $validated['grade_value'] = $validated['grade_value'] ?? 'N/A';
+            $validated['route_type'] = $validated['route_type'] ?? 'Sport';
+            $validated['risk_rating'] = $validated['risk_rating'] ?? 'None';
+            $validated['pitch_count'] = $validated['pitch_count'] ?? 1;
+            $validated['status'] = $validated['status'] ?? 'New';
+
+            // Admins always get auto-approved routes
+            $validated['is_approved'] = true;
+            $validated['approved_by_user_id'] = auth()->id();
+            $validated['approved_at'] = now();
+        } elseif (auth()->user()->canAutoApproveRoutes()) {
+            // Auto-approve for Club/Equipper users
             $validated['is_approved'] = true;
             $validated['approved_by_user_id'] = auth()->id();
             $validated['approved_at'] = now();
@@ -97,8 +110,10 @@ class RouteController extends Controller
             ? 'Route created and approved successfully!'
             : 'Route submitted for approval.';
 
+        // Disable Livewire navigation to force fresh data load
         return redirect()->route('routes.show', $route)
-            ->with('success', $message);
+            ->with('success', $message)
+            ->header('X-Livewire-Navigate', 'false');
     }
 
     /**
@@ -169,12 +184,12 @@ class RouteController extends Controller
             $validated['topo_data'] = null;
         }
 
-        if (empty($validated['topo_url']) && !$route->topo_url) {
+        if (empty($validated['topo_url']) && ! $route->topo_url) {
             $validated['topo_data'] = null;
         }
 
         // Trigger re-moderation if edited by non-admin/moderator
-        if (!auth()->user()->isAdmin() && !auth()->user()->isModerator()) {
+        if (! auth()->user()->isAdmin() && ! auth()->user()->isModerator()) {
             $validated['is_approved'] = false;
             $validated['approved_by_user_id'] = null;
             $validated['approved_at'] = null;
@@ -183,7 +198,7 @@ class RouteController extends Controller
         $route->update($validated);
 
         $uploadedPhotos = $request->file('photos', []);
-        if (!empty($uploadedPhotos)) {
+        if (! empty($uploadedPhotos)) {
             $existingCount = $route->photos()->where('is_topo', false)->count();
             $incomingCount = count($uploadedPhotos);
             if (($existingCount + $incomingCount) > 10) {
@@ -205,12 +220,14 @@ class RouteController extends Controller
             }
         }
 
-        $message = !$route->is_approved
+        $message = ! $route->is_approved
             ? 'Changes saved. Route will need re-approval.'
             : 'Route updated successfully!';
 
+        // Disable Livewire navigation to force fresh data load
         return redirect()->route('routes.show', $route)
-            ->with('success', $message);
+            ->with('success', $message)
+            ->header('X-Livewire-Navigate', 'false');
     }
 
     /**
@@ -222,8 +239,10 @@ class RouteController extends Controller
 
         $route->delete();
 
+        // Disable Livewire navigation to force fresh data load
         return redirect()->route('routes.index')
-            ->with('success', 'Route deleted successfully.');
+            ->with('success', 'Route deleted successfully.')
+            ->header('X-Livewire-Navigate', 'false');
     }
 
     /**

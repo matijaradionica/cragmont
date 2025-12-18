@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreLocationRequest;
 use App\Http\Requests\UpdateLocationRequest;
 use App\Models\Location;
-use Illuminate\Http\Request;
 
 class LocationController extends Controller
 {
@@ -47,8 +46,10 @@ class LocationController extends Controller
 
         $location = Location::create($validated);
 
+        // Disable Livewire navigation to force fresh data load
         return redirect()->route('locations.show', $location)
-            ->with('success', 'Location created successfully!');
+            ->with('success', 'Location created successfully!')
+            ->header('X-Livewire-Navigate', 'false');
     }
 
     /**
@@ -61,7 +62,7 @@ class LocationController extends Controller
         // Load relationships
         $location->load(['parent', 'children', 'routes' => function ($query) {
             // Only show approved routes unless user is admin/moderator or creator
-            if (!auth()->user() || (!auth()->user()->isAdmin() && !auth()->user()->isModerator())) {
+            if (! auth()->user() || (! auth()->user()->isAdmin() && ! auth()->user()->isModerator())) {
                 $query->where('is_approved', true);
             }
             $query->orderBy('name');
@@ -98,8 +99,10 @@ class LocationController extends Controller
 
         $location->update($validated);
 
+        // Disable Livewire navigation to force fresh data load
         return redirect()->route('locations.show', $location)
-            ->with('success', 'Location updated successfully!');
+            ->with('success', 'Location updated successfully!')
+            ->header('X-Livewire-Navigate', 'false');
     }
 
     /**
@@ -111,7 +114,9 @@ class LocationController extends Controller
 
         $location->delete();
 
+        // Disable Livewire navigation to force fresh data load
         return redirect()->route('locations.index')
-            ->with('success', 'Location deleted successfully.');
+            ->with('success', 'Location deleted successfully.')
+            ->header('X-Livewire-Navigate', 'false');
     }
 }

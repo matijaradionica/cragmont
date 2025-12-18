@@ -177,7 +177,7 @@ new class extends Component
                         </x-slot>
 
                         <x-slot name="content">
-                            <x-dropdown-link :href="route('ascents.index')" wire:navigate>
+                            <x-dropdown-link :href="route('ascents.index') . '?_=' . time()">
                                 {{ __('Logbook') }}
                             </x-dropdown-link>
                             <x-dropdown-link :href="route('profile')" wire:navigate>
@@ -285,7 +285,7 @@ new class extends Component
                             </span>
                         </x-responsive-nav-link>
                     @endif
-                    <x-responsive-nav-link :href="route('ascents.index')" wire:navigate>
+                    <x-responsive-nav-link :href="route('ascents.index') . '?_=' . time()">
                         {{ __('Logbook') }}
                     </x-responsive-nav-link>
                     @can('moderateConditions')

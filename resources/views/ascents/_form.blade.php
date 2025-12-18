@@ -1,7 +1,12 @@
 <div class="space-y-6">
     <!-- Route Selection -->
     <div>
-        <label for="route_id" class="block text-sm font-medium text-gray-700">Route *</label>
+        <div class="flex items-center justify-between mb-2">
+            <label for="route_id" class="block text-sm font-medium text-gray-700">Route *</label>
+            @if(!isset($route) || !$route)
+                <livewire:inline-route-creation />
+            @endif
+        </div>
         <select name="route_id" id="route_id" required
             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             {{ isset($route) && $route ? 'disabled' : '' }}>
@@ -20,6 +25,43 @@
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror
     </div>
+
+    @push('scripts')
+    <script>
+        document.addEventListener('livewire:initialized', function() {
+            Livewire.on('routeCreated', function(event) {
+                const routeId = event.routeId;
+                const routeName = event.routeName;
+                const routeSelect = document.getElementById('route_id');
+
+                if (routeSelect) {
+                    // Create new option element
+                    const newOption = document.createElement('option');
+                    newOption.value = routeId;
+                    newOption.text = routeName + ' (Just created)';
+                    newOption.selected = true;
+
+                    // Add to select dropdown
+                    routeSelect.add(newOption);
+
+                    // Trigger change event
+                    routeSelect.dispatchEvent(new Event('change'));
+
+                    // Show success message
+                    const successDiv = document.createElement('div');
+                    successDiv.className = 'mt-2 p-3 bg-green-50 border border-green-200 rounded-md text-sm text-green-800';
+                    successDiv.innerHTML = '<strong>✓ Route created successfully!</strong> The route has been auto-selected below.';
+                    routeSelect.parentElement.appendChild(successDiv);
+
+                    // Remove success message after 5 seconds
+                    setTimeout(function() {
+                        successDiv.remove();
+                    }, 5000);
+                }
+            });
+        });
+    </script>
+    @endpush
 
     <!-- Ascent Date -->
     <div>

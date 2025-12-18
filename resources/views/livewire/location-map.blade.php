@@ -15,35 +15,67 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script>
-    (function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        initMap_{{ $this->getId() }}();
+    });
+
+    // Also trigger on Livewire navigation
+    document.addEventListener('livewire:navigated', function() {
+        // Small delay to ensure DOM is ready and Leaflet is loaded
+        setTimeout(function() {
+            initMap_{{ $this->getId() }}();
+        }, 50);
+    });
+
+    function initMap_{{ $this->getId() }}() {
+        // Wait for Leaflet to be available
+        if (typeof L === 'undefined') {
+            console.warn('Leaflet not loaded yet, retrying...');
+            setTimeout(initMap_{{ $this->getId() }}, 100);
+            return;
+        }
+
         const mapId = 'map-{{ $this->getId() }}';
-        let mapInstance = null;
+        const mapElement = document.getElementById(mapId);
 
-        function initializeMap() {
-            const mapElement = document.getElementById(mapId);
+        if (!mapElement) {
+            console.warn('Map element not found:', mapId);
+            return;
+        }
 
-            if (!mapElement) {
-                console.warn('Map element not found:', mapId);
-                return;
+        // Check if element is visible in the DOM
+        if (!mapElement.offsetParent && mapElement.style.display !== 'none') {
+            console.warn('Map container not visible, retrying...');
+            setTimeout(initMap_{{ $this->getId() }}, 100);
+            return;
+        }
+
+        try {
+            // Clean up existing map instance if it exists
+            if (mapElement._leaflet_id) {
+                // Remove existing map
+                if (window['mapInstance_' + mapId]) {
+                    try {
+                        window['mapInstance_' + mapId].remove();
+                    } catch (e) {
+                        console.warn('Error removing existing map:', e);
+                    }
+                    delete window['mapInstance_' + mapId];
+                }
+                mapElement._leaflet_id = null;
+                mapElement.innerHTML = '';
             }
-
-            // Check if map already exists and remove it
-            if (mapInstance) {
-                mapInstance.remove();
-                mapInstance = null;
-            }
-
-            // Clear the container
-            mapElement.innerHTML = '';
-            mapElement._leaflet_id = null;
 
             // Initialize map
-            mapInstance = L.map(mapId, {
+            const mapInstance = L.map(mapId, {
                 preferCanvas: true,
                 worldCopyJump: true,
                 maxBounds: [[-90, -180], [90, 180]],
                 maxBoundsViscosity: 1.0
             }).setView([{{ $centerLat }}, {{ $centerLng }}], {{ $zoom }});
+
+            // Store map instance globally for cleanup
+            window['mapInstance_' + mapId] = mapInstance;
 
             // Add tile layer (OpenStreetMap)
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -95,36 +127,73 @@
             // Add marker cluster to map
             mapInstance.addLayer(markers);
 
-            // Fix map size issues
-            setTimeout(() => {
-                mapInstance.invalidateSize();
+            // Fix map size issues and fit bounds
+            // Use requestAnimationFrame to ensure browser has rendered the map
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    try {
+                        // Check if map instance and container are still valid
+                        if (!mapInstance || !mapElement || !mapElement.offsetParent) {
+                            return;
+                        }
 
-                // Fit bounds if multiple locations
-                @if(!$showSingleLocation && count($locations) > 1)
-                    if (markers.getLayers().length > 0) {
-                        mapInstance.fitBounds(markers.getBounds(), { padding: [50, 50] });
+                        // Check if map container has dimensions
+                        const containerSize = mapElement.getBoundingClientRect();
+                        if (containerSize.width === 0 || containerSize.height === 0) {
+                            return;
+                        }
+
+                        // Check if map is properly initialized with a size
+                        const mapSize = mapInstance.getSize();
+                        if (!mapSize || mapSize.x === 0 || mapSize.y === 0) {
+                            return;
+                        }
+
+                        mapInstance.invalidateSize();
+
+                        // Fit bounds if multiple locations
+                        @if(!$showSingleLocation && count($locations) > 1)
+                            if (markers.getLayers().length > 0) {
+                                try {
+                                    const bounds = markers.getBounds();
+                                    if (bounds && bounds.isValid()) {
+                                        // Additional check: ensure map panes are initialized
+                                        const panes = mapInstance.getPanes();
+                                        if (panes && panes.mapPane) {
+                                            mapInstance.fitBounds(bounds, {
+                                                padding: [50, 50],
+                                                animate: false // Disable animation to avoid timing issues
+                                            });
+                                        }
+                                    }
+                                } catch (boundsError) {
+                                    // Silently fail - map will still work, just won't auto-fit
+                                }
+                            }
+                        @endif
+                    } catch (error) {
+                        // Silently fail - map will still work
                     }
-                @endif
-            }, 100);
+                }, 300);
+            });
+        } catch (error) {
+            console.error('Error initializing map:', error);
+            return;
         }
+    }
 
-        // Initialize on DOMContentLoaded (for initial page load)
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeMap);
-        } else {
-            initializeMap();
-        }
-
-        // Re-initialize on Livewire navigation
-        document.addEventListener('livewire:navigated', initializeMap);
-
-        // Cleanup on page leave
-        document.addEventListener('livewire:navigating', function() {
-            if (mapInstance) {
-                mapInstance.remove();
-                mapInstance = null;
+    // Cleanup on page leave
+    document.addEventListener('livewire:navigating', function() {
+        const mapId = 'map-{{ $this->getId() }}';
+        if (window['mapInstance_' + mapId]) {
+            try {
+                window['mapInstance_' + mapId].off();
+                window['mapInstance_' + mapId].remove();
+                delete window['mapInstance_' + mapId];
+            } catch (e) {
+                console.warn('Error cleaning up map:', e);
             }
-        });
-    })();
+        }
+    });
 </script>
 @endpush

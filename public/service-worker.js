@@ -38,7 +38,8 @@ async function cacheFirst(request, cacheName) {
     const cached = await cache.match(request);
     if (cached) return cached;
     const response = await fetch(request);
-    if (response && response.ok) {
+    // Only cache GET requests (Cache API doesn't support POST, PUT, DELETE, etc.)
+    if (response && response.ok && request.method === 'GET') {
         cache.put(request, response.clone());
     }
     return response;
@@ -48,7 +49,8 @@ async function networkFirst(request, cacheName) {
     const cache = await caches.open(cacheName);
     try {
         const response = await fetch(request);
-        if (response && response.ok) {
+        // Only cache GET requests (Cache API doesn't support POST, PUT, DELETE, etc.)
+        if (response && response.ok && request.method === 'GET') {
             cache.put(request, response.clone());
         }
         return response;
@@ -62,6 +64,12 @@ async function networkFirst(request, cacheName) {
 
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
+
+    // Only handle GET requests with service worker caching
+    // POST, PUT, DELETE requests should bypass the cache
+    if (event.request.method !== 'GET') {
+        return;
+    }
 
     if (isNavigationRequest(event.request)) {
         event.respondWith(networkFirst(event.request, PAGE_CACHE));
