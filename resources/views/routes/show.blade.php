@@ -158,11 +158,23 @@
                                             aria-label="Close">✕</button>
 
                                         <button type="button" data-route-gallery-prev
-                                            class="absolute left-2 top-1/2 -translate-y-1/2 z-10 px-3 py-2 text-white/80 hover:text-white"
+                                            class="absolute left-2 top-1/2 -translate-y-1/2 z-10 px-3 py-2 text-white/80 hover:text-white text-4xl"
                                             aria-label="Previous">‹</button>
                                         <button type="button" data-route-gallery-next
-                                            class="absolute right-2 top-1/2 -translate-y-1/2 z-10 px-3 py-2 text-white/80 hover:text-white"
+                                            class="absolute right-2 top-1/2 -translate-y-1/2 z-10 px-3 py-2 text-white/80 hover:text-white text-4xl"
                                             aria-label="Next">›</button>
+
+                                        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-black/60 rounded-lg px-3 py-2">
+                                            <button type="button" data-route-gallery-zoom-out
+                                                class="text-white/80 hover:text-white px-3 py-1 text-2xl font-bold"
+                                                aria-label="Zoom out">−</button>
+                                            <button type="button" data-route-gallery-zoom-reset
+                                                class="text-white/80 hover:text-white px-3 py-1 text-sm"
+                                                aria-label="Reset zoom">Reset</button>
+                                            <button type="button" data-route-gallery-zoom-in
+                                                class="text-white/80 hover:text-white px-3 py-1 text-2xl font-bold"
+                                                aria-label="Zoom in">+</button>
+                                        </div>
 
                                         <img data-route-gallery-lightbox-img alt="Route photo"
                                             class="block max-h-[90vh] w-auto max-w-full mx-auto object-contain">

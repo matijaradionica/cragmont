@@ -21,6 +21,11 @@
                 </div>
             @endif
 
+            <div class="mb-6 bg-white shadow-sm sm:rounded-lg p-4">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Offline Access</h3>
+                <livewire:routes.precache-nearby />
+            </div>
+
             <livewire:route-search />
         </div>
     </div>

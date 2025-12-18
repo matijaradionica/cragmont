@@ -766,7 +766,11 @@ async function initTopoViewers() {
                     obj.lockScalingX = true;
                     obj.lockScalingY = true;
                     obj.hoverCursor = isInfoMarker ? 'pointer' : 'default';
+                    obj.visible = true;
+                    obj.opacity = 1;
                 });
+
+                viewerCanvas.renderAll();
             };
 
             const escapeHtml = (value) =>
@@ -945,6 +949,7 @@ async function initTopoViewers() {
             viewerCanvas.on('mouse:up', () => {
                 interaction.isPanning = false;
                 viewerCanvas.defaultCursor = 'default';
+                viewerCanvas.renderAll();
                 if (interaction.pinnedMarker) showTooltipForMarker(interaction.pinnedMarker);
             });
             viewerCanvas.on('mouse:out', () => {
@@ -1005,7 +1010,13 @@ async function initTopoViewers() {
             };
             const onPointerUp = (e) => {
                 activePointers.delete(e.pointerId);
-                if (activePointers.size < 2) pinchState.active = false;
+                if (activePointers.size < 2) {
+                    pinchState.active = false;
+                }
+                if (activePointers.size === 0) {
+                    viewerCanvas.calcOffset();
+                    viewerCanvas.renderAll();
+                }
             };
 
             viewerCanvas.upperCanvasEl.addEventListener('pointerdown', onPointerDown, { passive: false });
@@ -1151,8 +1162,10 @@ async function initTopoViewers() {
                 // Reset viewport transform and zoom when reopening lightbox
                 largeViewer.viewerCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
                 largeViewer.viewerCanvas.setZoom(1);
+                largeViewer.applyReadOnly();
                 largeViewer.setCanvasCssSize();
-                largeViewer.viewerCanvas.requestRenderAll();
+                largeViewer.viewerCanvas.calcOffset();
+                largeViewer.viewerCanvas.renderAll();
             }
         };
 

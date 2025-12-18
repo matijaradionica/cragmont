@@ -82,6 +82,76 @@ async function loadRouteOffline(routeId) {
     return idbGet(routeKey(routeId));
 }
 
+async function getNearbyRoutes({ lat, lng, radius = 10, limit = 20 }) {
+    const params = new URLSearchParams({ lat, lng, radius, limit });
+    const response = await fetch(`/routes/nearby?${params}`, { credentials: 'same-origin' });
+    if (!response.ok) {
+        throw new Error(`Failed to fetch nearby routes: ${response.status}`);
+    }
+    return response.json();
+}
+
+async function saveMultipleRoutesOffline(routes, onProgress = null) {
+    const results = { succeeded: [], failed: [] };
+
+    for (let i = 0; i < routes.length; i++) {
+        const route = routes[i];
+        try {
+            await saveRouteOffline({
+                routeId: String(route.id),
+                topoUrl: route.topo_url,
+                topoData: route.topo_data,
+            });
+            results.succeeded.push(route);
+            if (onProgress) {
+                onProgress({ current: i + 1, total: routes.length, route, success: true });
+            }
+        } catch (err) {
+            results.failed.push({ route, error: err });
+            if (onProgress) {
+                onProgress({ current: i + 1, total: routes.length, route, success: false, error: err });
+            }
+        }
+    }
+
+    return results;
+}
+
+function getUserLocation() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error('Geolocation is not supported by your browser'));
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                resolve({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                    accuracy: position.coords.accuracy,
+                });
+            },
+            (error) => {
+                let message = 'Unable to retrieve your location';
+                if (error.code === error.PERMISSION_DENIED) {
+                    message = 'Location permission denied';
+                } else if (error.code === error.POSITION_UNAVAILABLE) {
+                    message = 'Location information unavailable';
+                } else if (error.code === error.TIMEOUT) {
+                    message = 'Location request timed out';
+                }
+                reject(new Error(message));
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 300000, // Cache position for 5 minutes
+            }
+        );
+    });
+}
+
 function applyOfflineTopoToViewer({ routeId, topoData, topoImageBlob }) {
     const root = document.querySelector('[data-topo-viewer]');
     if (!root) return false;
@@ -153,6 +223,45 @@ function initOffline() {
                 new CustomEvent('cragmont:offline-save-failed', {
                     detail: { routeId, message: err instanceof Error ? err.message : String(err) },
                 }),
+            );
+        }
+    });
+
+    window.addEventListener('cragmont:precache-nearby', async (e) => {
+        const detail = e.detail ?? {};
+        const radius = detail.radius ?? 10;
+        const limit = detail.limit ?? 20;
+
+        try {
+            const position = await getUserLocation();
+            window.dispatchEvent(new CustomEvent('cragmont:precache-location-acquired', { detail: position }));
+
+            const { routes, count } = await getNearbyRoutes({
+                lat: position.lat,
+                lng: position.lng,
+                radius,
+                limit,
+            });
+
+            if (routes.length === 0) {
+                window.dispatchEvent(
+                    new CustomEvent('cragmont:precache-complete', {
+                        detail: { succeeded: [], failed: [], message: 'No nearby routes found with topo diagrams' },
+                    })
+                );
+                return;
+            }
+
+            const results = await saveMultipleRoutesOffline(routes, (progress) => {
+                window.dispatchEvent(new CustomEvent('cragmont:precache-progress', { detail: progress }));
+            });
+
+            window.dispatchEvent(new CustomEvent('cragmont:precache-complete', { detail: results }));
+        } catch (err) {
+            window.dispatchEvent(
+                new CustomEvent('cragmont:precache-failed', {
+                    detail: { message: err instanceof Error ? err.message : String(err) },
+                })
             );
         }
     });

@@ -14,23 +14,35 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserRoleController;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome');
+// Redirect to routes list as the default welcome page
+Route::redirect('/', '/routes');
 
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+// Dashboard route removed - users are directed to routes list instead
+// Route::view('dashboard', 'dashboard')
+//     ->middleware(['auth', 'verified'])
+//     ->name('dashboard');
 
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
 
-// Location routes - authenticated users can view, admin/moderator can manage
+// Location routes - public can view, authenticated users can manage
+Route::get('locations', [LocationController::class, 'index'])->name('locations.index');
+Route::get('locations/{location}', [LocationController::class, 'show'])->name('locations.show');
+
 Route::middleware('auth')->group(function () {
-    Route::resource('locations', LocationController::class);
+    Route::get('locations/create', [LocationController::class, 'create'])->name('locations.create');
+    Route::post('locations', [LocationController::class, 'store'])->name('locations.store');
+    Route::get('locations/{location}/edit', [LocationController::class, 'edit'])->name('locations.edit');
+    Route::put('locations/{location}', [LocationController::class, 'update'])->name('locations.update');
+    Route::delete('locations/{location}', [LocationController::class, 'destroy'])->name('locations.destroy');
 });
 
 // Routes list is public (pending routes remain restricted by policy)
 Route::get('routes', [RouteController::class, 'index'])->name('routes.index');
+
+// Get nearby routes for offline pre-caching
+Route::get('routes/nearby', [RouteController::class, 'nearby'])->name('routes.nearby');
 
 // Route assets are public for approved routes (policy-enforced) and must be defined before the show route.
 Route::get('routes/{route}/topo', [RouteTopoController::class, 'show'])

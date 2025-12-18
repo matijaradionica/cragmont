@@ -7,6 +7,8 @@ use App\Http\Requests\UpdateRouteRequest;
 use App\Models\Location;
 use App\Models\Photo;
 use App\Models\Route;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class RouteController extends Controller
@@ -220,6 +222,55 @@ class RouteController extends Controller
         return redirect()->route('routes.index')
             ->with('success', 'Route deleted successfully.')
             ->header('X-Livewire-Navigate', 'false');
+    }
+
+    /**
+     * Get nearby routes based on GPS coordinates.
+     */
+    public function nearby(Request $request)
+    {
+        $request->validate([
+            'lat' => 'required|numeric|between:-90,90',
+            'lng' => 'required|numeric|between:-180,180',
+            'radius' => 'nullable|numeric|min:1|max:100',
+            'limit' => 'nullable|integer|min:1|max:50',
+        ]);
+
+        $lat = $request->input('lat');
+        $lng = $request->input('lng');
+        $radius = $request->input('radius', 10); // Default 10km
+        $limit = $request->input('limit', 20); // Default 20 routes
+
+        // Haversine formula to calculate distance in kilometers
+        // Only return routes that have a topo_url (for offline caching)
+        $routes = Route::select('routes.*')
+            ->join('locations', 'routes.location_id', '=', 'locations.id')
+            ->whereNotNull('locations.gps_lat')
+            ->whereNotNull('locations.gps_lng')
+            ->whereNotNull('routes.topo_url')
+            ->where('routes.status', '!=', 'Closed')
+            ->selectRaw(
+                '(6371 * acos(cos(radians(?)) * cos(radians(locations.gps_lat)) * cos(radians(locations.gps_lng) - radians(?)) + sin(radians(?)) * sin(radians(locations.gps_lat)))) AS distance',
+                [$lat, $lng, $lat]
+            )
+            ->having('distance', '<=', $radius)
+            ->orderBy('distance')
+            ->limit($limit)
+            ->with(['location'])
+            ->get();
+
+        return response()->json([
+            'routes' => $routes->map(fn($route) => [
+                'id' => $route->id,
+                'name' => $route->name,
+                'location' => $route->location?->getFullPath(),
+                'grade' => $route->getGradeDisplay(),
+                'distance_km' => round($route->distance, 2),
+                'topo_url' => $route->topo_url ? route('routes.topo', $route) : null,
+                'topo_data' => $route->topo_data,
+            ]),
+            'count' => $routes->count(),
+        ]);
     }
 
 }
