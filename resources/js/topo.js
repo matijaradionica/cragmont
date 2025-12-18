@@ -671,9 +671,11 @@ async function initTopoViewers() {
         root.dataset.topoInitialized = 'true';
 
         const MAX_BASE_DIMENSION = 2000;
+        const isMobile = () => window.innerWidth < 768;
         const createViewer = (viewerRoot, element, tooltipElement, options = {}) => {
             const viewerCanvas = new fabric.Canvas(element, { selection: false, renderOnAddRemove: true });
-            viewerCanvas.targetFindTolerance = 22;
+            // Larger tolerance on mobile for easier tapping
+            viewerCanvas.targetFindTolerance = isMobile() ? 60 : 30;
             viewerCanvas.upperCanvasEl.style.touchAction = 'none';
 
             const MIN_ZOOM = 0.75;
@@ -699,6 +701,10 @@ async function initTopoViewers() {
             const setCanvasCssSize = () => {
                 const rect = viewerRoot.getBoundingClientRect();
                 if (!rect.width || !viewerCanvas.width || !viewerCanvas.height) return;
+
+                // Update tolerance for mobile/desktop
+                viewerCanvas.targetFindTolerance = isMobile() ? 60 : 30;
+
                 if (rect.height && rect.height > 50) {
                     const scale = Math.min(rect.width / viewerCanvas.width, rect.height / viewerCanvas.height);
                     const cssWidth = Math.max(1, Math.floor(viewerCanvas.width * scale));
@@ -714,11 +720,28 @@ async function initTopoViewers() {
                 viewerCanvas.calcOffset();
             };
 
+            const scaleInfoMarkersForMobile = () => {
+                if (!isMobile()) return;
+                const mobileScale = 2;
+
+                viewerCanvas.getObjects().forEach((obj) => {
+                    if (obj.dataType === 'info-marker') {
+                        const currentScale = obj.scaleX || 1;
+                        obj.set({
+                            scaleX: currentScale * mobileScale,
+                            scaleY: currentScale * mobileScale,
+                        });
+                    }
+                });
+            };
+
             const applyReadOnly = () => {
                 viewerCanvas.selection = false;
                 viewerCanvas.defaultCursor = 'default';
                 viewerCanvas.hoverCursor = 'default';
                 viewerCanvas.moveCursor = 'default';
+
+                scaleInfoMarkersForMobile();
 
                 viewerCanvas.getObjects().forEach((obj) => {
                     const isInfoMarker = obj.dataType === 'info-marker';
@@ -756,15 +779,44 @@ async function initTopoViewers() {
                 if (!data?.title && !data?.description) return;
 
                 const rect = viewerRoot.getBoundingClientRect();
-                const x = (event?.e?.clientX ?? rect.left) - rect.left + 10;
-                const y = (event?.e?.clientY ?? rect.top) - rect.top + 10;
+                const clientX = event?.e?.clientX ?? rect.left;
+                const clientY = event?.e?.clientY ?? rect.top;
 
                 const title = data?.title ? `<div class="font-semibold mb-0.5">${escapeHtml(data.title)}</div>` : '';
                 const desc = data?.description ? `<div class="whitespace-pre-wrap">${escapeHtml(data.description)}</div>` : '';
                 tooltipElement.innerHTML = `${title}${desc}`;
-                tooltipElement.style.left = `${Math.round(x)}px`;
-                tooltipElement.style.top = `${Math.round(y)}px`;
+
+                // Position tooltip with smart overflow prevention
+                let left = Math.round(clientX - rect.left + 10);
+                let top = Math.round(clientY - rect.top + 10);
+
+                // Temporarily show to measure dimensions
+                tooltipElement.style.left = `${left}px`;
+                tooltipElement.style.top = `${top}px`;
                 tooltipElement.classList.remove('hidden');
+
+                const tooltipRect = tooltipElement.getBoundingClientRect();
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+
+                // Adjust horizontal position if overflowing right edge
+                if (tooltipRect.right > viewportWidth - 10) {
+                    left = Math.round(clientX - rect.left - tooltipRect.width - 10);
+                    if (left < 10) {
+                        left = 10;
+                    }
+                }
+
+                // Adjust vertical position if overflowing bottom edge
+                if (tooltipRect.bottom > viewportHeight - 10) {
+                    top = Math.round(clientY - rect.top - tooltipRect.height - 10);
+                    if (top < 10) {
+                        top = 10;
+                    }
+                }
+
+                tooltipElement.style.left = `${left}px`;
+                tooltipElement.style.top = `${top}px`;
             };
 
             const showTooltipForMarker = (marker) => {
@@ -783,9 +835,40 @@ async function initTopoViewers() {
                 const title = data?.title ? `<div class="font-semibold mb-0.5">${escapeHtml(data.title)}</div>` : '';
                 const desc = data?.description ? `<div class="whitespace-pre-wrap">${escapeHtml(data.description)}</div>` : '';
                 tooltipElement.innerHTML = `${title}${desc}`;
-                tooltipElement.style.left = `${Math.round(x - rootRect.left + 10)}px`;
-                tooltipElement.style.top = `${Math.round(y - rootRect.top + 10)}px`;
+
+                // Position tooltip with smart overflow prevention
+                let left = Math.round(x - rootRect.left + 10);
+                let top = Math.round(y - rootRect.top + 10);
+
+                // Temporarily show to measure dimensions
+                tooltipElement.style.left = `${left}px`;
+                tooltipElement.style.top = `${top}px`;
                 tooltipElement.classList.remove('hidden');
+
+                const tooltipRect = tooltipElement.getBoundingClientRect();
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+
+                // Adjust horizontal position if overflowing right edge
+                if (tooltipRect.right > viewportWidth - 10) {
+                    left = Math.round(x - rootRect.left - tooltipRect.width - 10);
+                    // If it would overflow left edge, clamp to viewport
+                    if (left < 10) {
+                        left = 10;
+                    }
+                }
+
+                // Adjust vertical position if overflowing bottom edge
+                if (tooltipRect.bottom > viewportHeight - 10) {
+                    top = Math.round(y - rootRect.top - tooltipRect.height - 10);
+                    // If it would overflow top edge, clamp to viewport
+                    if (top < 10) {
+                        top = 10;
+                    }
+                }
+
+                tooltipElement.style.left = `${left}px`;
+                tooltipElement.style.top = `${top}px`;
             };
 
             const interaction = {
