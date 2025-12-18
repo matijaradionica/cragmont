@@ -671,7 +671,7 @@ async function initTopoViewers() {
         root.dataset.topoInitialized = 'true';
 
         const MAX_BASE_DIMENSION = 2000;
-        const createViewer = (viewerRoot, element, tooltipElement) => {
+        const createViewer = (viewerRoot, element, tooltipElement, options = {}) => {
             const viewerCanvas = new fabric.Canvas(element, { selection: false, renderOnAddRemove: true });
             viewerCanvas.targetFindTolerance = 22;
             viewerCanvas.upperCanvasEl.style.touchAction = 'none';
@@ -679,6 +679,7 @@ async function initTopoViewers() {
             const MIN_ZOOM = 0.75;
             const MAX_ZOOM = 6;
             const clampZoom = (zoom) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
+            const enablePanAndZoom = options.enablePanAndZoom !== false;
             const getCanvasScaleFromRect = () => {
                 const rect = viewerCanvas.upperCanvasEl.getBoundingClientRect();
                 if (!rect.width || !rect.height || !viewerCanvas.width || !viewerCanvas.height) {
@@ -813,6 +814,7 @@ async function initTopoViewers() {
                 }
 
                 clearPinnedTooltip();
+                if (!enablePanAndZoom) return;
                 const e = ev?.e;
                 if (!e) return;
                 interaction.isPanning = true;
@@ -859,6 +861,7 @@ async function initTopoViewers() {
             });
 
             viewerCanvas.on('mouse:wheel', (opt) => {
+                if (!enablePanAndZoom) return;
                 const e = opt?.e;
                 if (!e) return;
                 e.preventDefault();
@@ -877,6 +880,7 @@ async function initTopoViewers() {
             const pinchState = { active: false, startDistance: 0, startZoom: 1 };
 
             const onPointerDown = (e) => {
+                if (!enablePanAndZoom) return;
                 activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
                 if (activePointers.size === 2) {
                     const points = Array.from(activePointers.values());
@@ -886,6 +890,7 @@ async function initTopoViewers() {
                 }
             };
             const onPointerMove = (e) => {
+                if (!enablePanAndZoom) return;
                 if (!activePointers.has(e.pointerId)) return;
                 activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
                 if (!pinchState.active || activePointers.size !== 2) return;
@@ -914,6 +919,7 @@ async function initTopoViewers() {
             viewerCanvas.upperCanvasEl.addEventListener('pointercancel', onPointerUp);
 
             viewerCanvas.upperCanvasEl.addEventListener('dblclick', () => {
+                if (!enablePanAndZoom) return;
                 viewerCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
                 viewerCanvas.setZoom(1);
                 viewerCanvas.requestRenderAll();
@@ -977,7 +983,7 @@ async function initTopoViewers() {
 
             if (!largeViewer) {
                 const lightboxContainer = root.querySelector('[data-topo-lightbox-wrap]') ?? lightboxCanvasElement.parentElement ?? lightbox;
-                largeViewer = createViewer(lightboxContainer, lightboxCanvasElement, lightboxTooltip);
+                largeViewer = createViewer(lightboxContainer, lightboxCanvasElement, lightboxTooltip, { enablePanAndZoom: false });
 
                 const img = await fabric.FabricImage.fromURL(topoUrl, { crossOrigin: 'anonymous' });
                 const naturalWidth = img.width ?? 0;
