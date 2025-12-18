@@ -11,12 +11,21 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class LocationFactory extends Factory
 {
     /**
+     * Get a Faker instance.
+     */
+    protected function getFaker(): \Faker\Generator
+    {
+        return $this->faker ?? \Faker\Factory::create();
+    }
+
+    /**
      * Define the model's default state.
      *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
+        $faker = $this->getFaker();
         // Mountain/Area names for level 0
         $mountains = [
             'Red Rock Canyon', 'Smith Rock', 'Devils Tower', 'Eldorado Canyon',
@@ -39,7 +48,7 @@ class LocationFactory extends Factory
             'Roof Sector', 'Hanging Garden', 'Amphitheater', 'Alcove', 'Gallery'
         ];
 
-        $level = $this->faker->numberBetween(0, 2);
+        $level = $faker->numberBetween(0, 2);
 
         $names = [
             0 => $mountains,
@@ -74,11 +83,11 @@ class LocationFactory extends Factory
         ];
 
         return [
-            'name' => $this->faker->randomElement($names[$level]),
+            'name' => $faker->randomElement($names[$level]),
             'level' => $level,
-            'gps_lat' => $level === 0 ? $this->faker->latitude(25, 50) : null,
-            'gps_lng' => $level === 0 ? $this->faker->longitude(-125, -70) : null,
-            'description' => $this->faker->randomElement($descriptions[$level]),
+            'gps_lat' => $level === 0 ? $faker->latitude(25, 50) : null,
+            'gps_lng' => $level === 0 ? $faker->longitude(-125, -70) : null,
+            'description' => $faker->randomElement($descriptions[$level]),
             'parent_id' => null, // Will be set by seeder
         ];
     }
@@ -88,10 +97,11 @@ class LocationFactory extends Factory
      */
     public function mountain(): static
     {
+        $faker = $this->getFaker();
         return $this->state(fn (array $attributes) => [
             'level' => 0,
-            'gps_lat' => $this->faker->latitude(25, 50),
-            'gps_lng' => $this->faker->longitude(-125, -70),
+            'gps_lat' => $faker->latitude(25, 50),
+            'gps_lng' => $faker->longitude(-125, -70),
             'parent_id' => null,
         ]);
     }
